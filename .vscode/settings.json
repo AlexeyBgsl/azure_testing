@@ -13,7 +13,8 @@
         "**/.hg": true,
         "**/CVS": true,
         "**/.DS_Store": true,
-        // Exclude .pyc files
-        "**/*.pyc": true
+        // Exclude python specific files
+        "**/*.pyc": true,
+        "**/__pychache__": true
     }
 }
