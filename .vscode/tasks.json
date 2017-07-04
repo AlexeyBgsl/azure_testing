@@ -1,0 +1,11 @@
+{
+    "version": "0.1.0",
+    "command": "dev_appserver.py",
+    "isShellCommand": true,
+    "showOutput": "always",
+    "args": [
+        "--automatic_restart=no",
+        "--max_module_instances=default:1",
+        "${workspaceRoot}/app.yaml"
+    ]
+}

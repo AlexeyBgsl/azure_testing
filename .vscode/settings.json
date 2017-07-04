@@ -1,0 +1,19 @@
+// Place your settings in this file to overwrite default and user settings.
+{
+    "python.pythonPath": "${workspaceRoot}/env/bin/python2",
+    "editor.rulers": [
+        79
+    ],
+    "python.linting.pylintArgs": [
+        "--disable=C0111,C0103"
+    ],
+    "files.exclude": {
+        "**/.git": true,
+        "**/.svn": true,
+        "**/.hg": true,
+        "**/CVS": true,
+        "**/.DS_Store": true,
+        // Exclude .pyc files
+        "**/*.pyc": true
+    }
+}
