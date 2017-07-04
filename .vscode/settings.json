@@ -1,6 +1,6 @@
 // Place your settings in this file to overwrite default and user settings.
 {
-    "python.pythonPath": "${workspaceRoot}/env/bin/python2",
+    "python.pythonPath": "${workspaceRoot}/env/bin/python",
     "editor.rulers": [
         79
     ],
