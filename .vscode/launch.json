@@ -2,6 +2,26 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "gunicorn server",
+            "type": "python",
+            "request": "launch",
+            "stopOnEntry": false,
+            "pythonPath": "${config:python.pythonPath}",
+            "program": "${workspaceRoot}/env/bin/gunicorn",
+            "cwd": "${workspaceRoot}",
+            "env": {},
+            "args": [
+                "-b 127.0.0.1:5000",
+                "main:app"
+            ],
+            "envFile": "${workspaceRoot}/.env",
+            "debugOptions": [
+                "WaitOnAbnormalExit",
+                "WaitOnNormalExit",
+                "RedirectOutput"
+            ]
+        },
+        {
             "name": "Flask",
             "type": "python",
             "request": "launch",
