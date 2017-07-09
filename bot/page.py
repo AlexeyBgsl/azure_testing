@@ -7,13 +7,13 @@ DUMP_ALL = True
 
 def dump_mfunc(f):
     @functools.wraps(f)
-    def wrapped(*args, **kwargs):
+    def wrapped(self, *args, **kwargs):
         logging.debug("*** %s func args ***", f.__name__)
-        for obj in args[1:]:
+        for obj in args:
             logging.debug("Object of type %s:", type(obj))
             logging.debug(vars(obj))
         logging.debug("*** Done ***")
-        return f(*args, **kwargs)
+        return f(self, *args, **kwargs)
     return wrapped
 
 
