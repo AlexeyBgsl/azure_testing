@@ -2,6 +2,7 @@ import logging
 import functools
 import fbmq
 from bot.config import CONFIG
+from bot.db_datastore import Users
 
 DUMP_ALL = True
 
@@ -24,6 +25,7 @@ dump_member_func = dump_mfunc if DUMP_ALL else null_decorator
 
 class BotPage(fbmq.Page):
     def __init__(self):
+        self.users = Users()
         super().__init__(CONFIG['ACCESS_TOKEN'])
         self.greeting("Hi {{user_first_name}}, welcome to Locano Chatbot!")
         self.show_starting_button("Show Help")
@@ -32,12 +34,27 @@ class BotPage(fbmq.Page):
             fbmq.Template.ButtonPostBack('Announce', 'MENU_PAYLOAD/2'),
             fbmq.Template.ButtonPostBack('Scan', 'MENU_PAYLOAD/3')])
 
+    def get_fb_profile(self, fbid):
+        profile = self.get_user_profile(fbid)
+        profile['fbid'] = fbid
+        return profile
+
+    def create_or_update_user(self, fbid):
+        user = self.users.by_fbid(fbid)
+        if user is None:
+            user = self.users.create(self.get_fb_profile(fbid))
+        return user
+
     @dump_member_func
     def on_message(self, event):
         sender_id = event.sender_id
-        message = event.message_text
-        logging.debug("[U#%s] [on_message] %s", sender_id, message)
-        page.send(sender_id, "thank you! your message is '%s'" % message)
+        user = self.create_or_update_user(sender_id)
+        if event.is_text_message:
+            message = event.message_text
+            logging.debug("[U#%s] [on_message] %s", sender_id, message)
+            page.send(sender_id, "thank you! your message is '%s'" % message)
+        else:
+            page.send(sender_id, "thank you! your message received")
 
     @dump_member_func
     def on_echo(self, event):
@@ -78,6 +95,7 @@ class BotPage(fbmq.Page):
     @dump_member_func
     def on_menu(self, payload, event):
         sender_id = event.sender_id
+        user = self.create_or_update_user(sender_id)
         item_id = payload.split('/')[1]
         logging.debug("[U#%s] [on_menu] %s", sender_id, item_id)
         page.send(sender_id, "thank you! you clicked button no. %s", item_id)
