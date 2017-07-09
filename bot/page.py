@@ -1,18 +1,26 @@
 import logging
-import functools
 import fbmq
 from bot.config import CONFIG
 from bot.db_datastore import Users
 
 DUMP_ALL = True
 
+primitive = (int, str, bool)
+
+def is_primitive(obj):
+    return isinstance(obj, primitive)
+
 def dump_mfunc(f):
+    import functools
     @functools.wraps(f)
     def wrapped(self, *args, **kwargs):
         logging.debug("*** %s func args ***", f.__name__)
         for obj in args:
             logging.debug("Object of type %s:", type(obj))
-            logging.debug(vars(obj))
+            if is_primitive(obj):
+                logging.debug(obj)
+            else:
+                logging.debug(vars(obj))
         logging.debug("*** Done ***")
         return f(self, *args, **kwargs)
     return wrapped
