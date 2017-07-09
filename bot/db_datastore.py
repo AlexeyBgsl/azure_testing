@@ -4,26 +4,30 @@ from bot.config import CONFIG
 
 # See https://googlecloudplatform.github.io/google-cloud-python/stable/datastore-client.html
 
-builtin_list = list
+class BasicEntry(ABC):
+    @classmethod
+    def create(cls, table, data):
+        return cls(table, table.create(data))
 
+    @property
+    def id(self):
+        return self.entity.key.id
 
-def from_datastore(entity):
-    """Translates Datastore results into the format expected by the
-    application.
+    def __init__(self, table, entity):
+        self.table = table
+        self.entity = entity
 
-    Datastore typically returns:
-        [Entity{key: (kind, id), prop: val, ...}]
+    def update(self, **kwargs):
+        if kwargs is not None:
+            for key in kwargs:
+                self.entity[key] = kwargs[key]
+        self.table.update(self.entity, self.id)
 
-    This returns:
-        {id: id, prop: val, ...}
-    """
-    if not entity:
-        return None
-    if isinstance(entity, builtin_list):
-        entity = entity.pop()
+    def read(self):
+        self.table.read(self.id)
 
-    entity['id'] = entity.key.id
-    return entity
+    def delete(self):
+        self.table.delete(self.id)
 
 
 class BasicTable(ABC):
@@ -43,7 +47,7 @@ class BasicTable(ABC):
             exclude_from_indexes=self.exclude_from_indexes)
         entity.update(data)
         self.client.put(entity)
-        return from_datastore(entity)
+        return entity
 
     def update(self, data, oid):
         return self._update(data, oid)
@@ -52,8 +56,7 @@ class BasicTable(ABC):
         return self.update(data, None)
 
     def read(self, oid):
-        results = self.client.get(self._get_key(oid))
-        return from_datastore(results)
+        return self.client.get(self._get_key(oid))
 
     def delete(self, oid):
         self.client.delete(self._get_key(oid))
@@ -61,15 +64,23 @@ class BasicTable(ABC):
     def query(self):
         return self.client.query(kind=self.kind)
 
+    def simple_query(self, **kwargs):
+        query = self.query()
+        for key in kwargs:
+            query.add_filter(key, '=', kwargs[key])
+        return list(query.fetch())
+
+
+class User(BasicEntry):
+    pass
+
 
 class Users(BasicTable):
     def __init__(self):
         super().__init__(kind="Users")
 
     def by_fbid(self, fbid):
-        query = self.query()
-        query.add_filter('fbid', '=', fbid)
-        results = list(query.fetch())
+        results = self.simple_query(fbid=fbid)
         if len(results) > 1:
             raise ValueError("FB ID must be unique")
-        return results[0] if results else None
+        return User(self, results[0]) if results else None

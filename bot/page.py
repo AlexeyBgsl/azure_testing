@@ -1,7 +1,7 @@
 import logging
 import fbmq
 from bot.config import CONFIG
-from bot.db_datastore import Users
+from bot.db_datastore import Users, User
 
 MENU_ID = "MENU"
 HELP_ID = "HELP"
@@ -10,6 +10,20 @@ ANNS_ID = "ANNOUNCEMENT"
 
 HELP_MESSAGE = ("This is Locano. We help you to make and receive "
                 "announcements")
+
+def safe_event_seq(f):
+    import functools
+    @functools.wraps(f)
+    def wrapped(self, *args, **kwargs):
+        for obj in args:
+            if isinstance(obj, fbmq.Event):
+                user = self.create_or_update_user(obj.sender_id,
+                                                  obj.message_seq)
+                if user:
+                    result = f(self, user, *args, **kwargs)
+                    user.update(fbmsgseq=obj.message_seq)
+                    return result
+    return wrapped
 
 DUMP_ALL = True
 
@@ -53,21 +67,30 @@ class BotPage(fbmq.Page):
             fbmq.Template.ButtonPostBack('Help',
                                          MENU_ID + '/' + HELP_ID),])
 
-    def get_fb_profile(self, fbid):
-        profile = self.get_user_profile(fbid)
-        profile['fbid'] = fbid
-        return profile
+    def _user_info_adjust(self, uinfo, fbid, seq):
+        uinfo['fbid'] = fbid
+        uinfo['fbmsgseq'] = seq
 
-    def create_or_update_user(self, fbid):
+    def _user_from_fb_profile(self, fbid, seq):
+        uinfo = self.get_user_profile(fbid)
+        self._user_info_adjust(uinfo, fbid, seq)
+        return User.create(self.users, uinfo)
+
+    def create_or_update_user(self, fbid, seq):
         user = self.users.by_fbid(fbid)
         if user is None:
-            user = self.users.create(self.get_fb_profile(fbid))
+            user = self._user_from_fb_profile(fbid, seq)
+        elif int(user.entity['fbmsgseq']) >= seq:
+            logging.debug("[U#%s] incorrect seq: %s > %d",
+                          fbid, user.entity['fbmsgseq'], seq)
+            user = None
+
         return user
 
+    @safe_event_seq
     @dump_member_func
-    def on_message(self, event):
+    def on_message(self, user, event):
         sender_id = event.sender_id
-        user = self.create_or_update_user(sender_id)
         if event.is_text_message:
             message = event.message_text
             logging.debug("[U#%s] [on_message] %s", sender_id, message)
@@ -111,10 +134,10 @@ class BotPage(fbmq.Page):
                       payload.recipient.id,
                       payload.message.text)
 
+    @safe_event_seq
     @dump_member_func
-    def on_menu(self, payload, event):
+    def on_menu(self, user, payload, event):
         sender_id = event.sender_id
-        user = self.create_or_update_user(sender_id)
         item_id = payload.split('/')[1]
         logging.debug("[U#%s] [on_menu] %s", sender_id, item_id)
         if item_id == CHAN_ID:
