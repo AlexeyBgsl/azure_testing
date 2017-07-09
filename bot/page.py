@@ -60,9 +60,9 @@ class BotPage(fbmq.Page):
         if event.is_text_message:
             message = event.message_text
             logging.debug("[U#%s] [on_message] %s", sender_id, message)
-            page.send(sender_id, "thank you! your message is '%s'" % message)
+            self.send(sender_id, "thank you! your message is '%s'" % message)
         else:
-            page.send(sender_id, "thank you! your message received")
+            self.send(sender_id, "thank you! your message received")
 
     @dump_member_func
     def on_echo(self, event):
@@ -106,7 +106,7 @@ class BotPage(fbmq.Page):
         user = self.create_or_update_user(sender_id)
         item_id = payload.split('/')[1]
         logging.debug("[U#%s] [on_menu] %s", sender_id, item_id)
-        page.send(sender_id, "thank you! you clicked button no. %s", item_id)
+        self.send(sender_id, "thank you! you clicked button no. %s" % item_id)
 
 
 page = BotPage()
