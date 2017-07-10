@@ -2,6 +2,7 @@ from abc import ABC
 from google.cloud import datastore
 from bot.config import CONFIG
 
+
 # See https://googlecloudplatform.github.io/google-cloud-python/stable/datastore-client.html
 
 class BasicEntry(ABC):

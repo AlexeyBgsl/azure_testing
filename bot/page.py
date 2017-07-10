@@ -11,6 +11,7 @@ ANNS_ID = "ANNOUNCEMENT"
 HELP_MESSAGE = ("This is Locano. We help you to make and receive "
                 "announcements")
 
+
 def safe_event_seq(f):
     import functools
     @functools.wraps(f)
@@ -23,14 +24,18 @@ def safe_event_seq(f):
                     result = f(self, user, *args, **kwargs)
                     user.update(fbmsgseq=obj.message_seq)
                     return result
+
     return wrapped
+
 
 DUMP_ALL = True
 
 primitive = (int, str, bool)
 
+
 def is_primitive(obj):
     return isinstance(obj, primitive)
+
 
 def dump_mfunc(f):
     import functools
@@ -45,13 +50,16 @@ def dump_mfunc(f):
                 logging.debug(vars(obj))
         logging.debug("*** Done ***")
         return f(self, *args, **kwargs)
+
     return wrapped
 
 
 def null_decorator(f):
     return f
 
+
 dump_member_func = dump_mfunc if DUMP_ALL else null_decorator
+
 
 class BotPage(fbmq.Page):
     def __init__(self):
@@ -65,7 +73,7 @@ class BotPage(fbmq.Page):
             fbmq.Template.ButtonPostBack('Announcement',
                                          MENU_ID + '/' + ANNS_ID),
             fbmq.Template.ButtonPostBack('Help',
-                                         MENU_ID + '/' + HELP_ID),])
+                                         MENU_ID + '/' + HELP_ID), ])
 
     def _user_info_adjust(self, uinfo, fbid, seq):
         uinfo['fbid'] = fbid

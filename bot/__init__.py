@@ -8,6 +8,7 @@ from bot.config import CONFIG
 
 BOT_ROOT = '/bot'
 
+
 def config_logger(app):
     logger = logging.getLogger()
     handler = logging.StreamHandler()
@@ -16,6 +17,7 @@ def config_logger(app):
     logger.addHandler(handler)
     if app.debug:
         logger.setLevel(logging.DEBUG)
+
 
 def create_app(config):
     app = Flask(__name__)

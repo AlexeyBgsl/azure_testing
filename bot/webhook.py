@@ -7,6 +7,7 @@ from bot.page import page
 
 botbp = Blueprint('botbp', __name__)
 
+
 @botbp.route('/', methods=['GET'])
 def verify():
     """Verification handler"""
