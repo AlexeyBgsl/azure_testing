@@ -35,7 +35,7 @@ def safe_event_seq(f):
     return wrapped
 
 
-DUMP_ALL = True
+DUMP_ALL = False
 
 primitive = (int, str, bool)
 
