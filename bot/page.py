@@ -3,6 +3,7 @@ import fbmq
 import functools
 from bot.config import CONFIG
 from bot.db_datastore import Users, User
+from bot.chat import CHAT_CLB_ID, chat_clb_handler, SelectChannelActionChat
 
 MENU_ID = "MENU"
 HELP_ID = "HELP"
@@ -100,7 +101,9 @@ class BotPage(fbmq.Page):
     @dump_member_func
     def on_message(self, user, event):
         sender_id = event.sender_id
-        if event.is_text_message:
+        if event.is_quick_reply:
+            logging.debug("[U#%s] [on_message] ignored as a quick reply", sender_id)
+        elif event.is_text_message:
             message = event.message_text
             logging.debug("[U#%s] [on_message] %s", sender_id, message)
             self.send(sender_id, "thank you! your message is '%s'" % message)
@@ -150,6 +153,8 @@ class BotPage(fbmq.Page):
         item_id = payload.split('/')[1]
         logging.debug("[U#%s] [on_menu] %s", sender_id, item_id)
         if item_id == CHAN_ID:
+            s = SelectChannelActionChat(page, fbid=sender_id)
+            s.start()
             pass
         elif item_id == ANNS_ID:
             pass
@@ -198,3 +203,8 @@ def postback_account_linking(event):
 @page.after_send
 def after_send(payload, response):
     page.on_after_send(payload, response)
+
+
+@page.callback([CHAT_CLB_ID + '/(.+)'])
+def chat_callback_handler(payload, event):
+    chat_clb_handler(page, payload, event)

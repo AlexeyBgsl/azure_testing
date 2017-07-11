@@ -85,3 +85,18 @@ class Users(BasicTable):
         if len(results) > 1:
             raise ValueError("FB ID must be unique")
         return User(self, results[0]) if results else None
+
+
+class Chat(BasicEntry):
+    pass
+
+
+class Chats(BasicTable):
+    def __init__(self):
+        super().__init__(kind="Chats")
+
+    def by_fbid(self, fbid):
+        results = self.simple_query(fbid=fbid)
+        if len(results) > 1:
+            raise ValueError("FB ID must be unique")
+        return Chats(self, results[0]) if results else None
