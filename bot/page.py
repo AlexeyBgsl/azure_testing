@@ -1,5 +1,6 @@
 import logging
 import fbmq
+import functools
 from bot.config import CONFIG
 from bot.db_datastore import Users, User
 
@@ -13,17 +14,22 @@ HELP_MESSAGE = ("This is Locano. We help you to make and receive "
 
 
 def safe_event_seq(f):
-    import functools
     @functools.wraps(f)
     def wrapped(self, *args, **kwargs):
         for obj in args:
             if isinstance(obj, fbmq.Event):
-                user = self.create_or_update_user(obj.sender_id,
-                                                  obj.message_seq)
+                user = self.create_or_update_user(obj.sender_id, obj.message_seq)
                 if user:
-                    result = f(self, user, *args, **kwargs)
-                    user.update(fbmsgseq=obj.message_seq)
-                    return result
+                    if not obj.message_seq or int(user.entity['fbmsgseq']) < obj.message_seq:
+                        result = f(self, user, *args, **kwargs)
+                        if obj.message_seq:
+                            user.update(fbmsgseq=obj.message_seq)
+                        return result
+                    else:
+                        logging.error("[U#%s] incorrect event seq: %s > %d",
+                                      obj.sender_id, user.entity['fbmsgseq'], obj.message_seq)
+                else:
+                    logging.error("[U#%s] cannot get user object", obj.sender_id)
 
     return wrapped
 
@@ -77,22 +83,17 @@ class BotPage(fbmq.Page):
 
     def _user_info_adjust(self, uinfo, fbid, seq):
         uinfo['fbid'] = fbid
-        uinfo['fbmsgseq'] = seq
+        uinfo['fbmsgseq'] = seq if seq else 0
 
     def _user_from_fb_profile(self, fbid, seq):
         uinfo = self.get_user_profile(fbid)
         self._user_info_adjust(uinfo, fbid, seq)
         return User.create(self.users, uinfo)
 
-    def create_or_update_user(self, fbid, seq):
+    def create_or_update_user(self, fbid, seq = None):
         user = self.users.by_fbid(fbid)
         if user is None:
             user = self._user_from_fb_profile(fbid, seq)
-        elif int(user.entity['fbmsgseq']) >= seq:
-            logging.debug("[U#%s] incorrect seq: %s > %d",
-                          fbid, user.entity['fbmsgseq'], seq)
-            user = None
-
         return user
 
     @safe_event_seq
