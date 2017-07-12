@@ -8,27 +8,51 @@ from bot.config import CONFIG
 class BasicEntry(ABC):
     @classmethod
     def create(cls, table, data):
-        return cls(table, table.create(data))
+        return cls(table, table.update(data))
 
-    @property
-    def id(self):
-        return self.entity.key.id
+    def __add_db_property(self, name):
+        if not name in self.db_fields:
+            self.db_fields.append(name)
 
-    def __init__(self, table, entity):
+    def add_db_field(self, name, default = None):
+        if not hasattr(self, name):
+            setattr(self, name, default)
+        self.__add_db_property(name)
+
+    def add_db_property(self, name):
+        self.__add_db_property(name)
+
+    def from_entity(self, e):
+        self.oid = e.key.id
+        for key in e:
+            if key != 'key':
+                self.add_db_field(key, e[key])
+
+    def __init__(self, table, entity=None):
+        """Constructor"""
         self.table = table
-        self.entity = entity
+        self.oid = None
+        self.db_fields = []
+        if entity:
+            self.from_entity(entity)
 
-    def update(self, **kwargs):
-        if kwargs is not None:
-            for key in kwargs:
-                self.entity[key] = kwargs[key]
-        self.table.update(self.entity, self.id)
+    def to_dict(self):
+        d = {}
+        for key in self.db_fields:
+            d[key] = getattr(self, key)
+        return d
+
+    def save(self):
+        entity = self.table.update(self.to_dict(), self.oid)
+        self.oid = entity.key.id
 
     def read(self):
-        self.table.read(self.id)
+        entity = self.table.read(self.oid)
+        self.from_entity(entity)
 
     def delete(self):
-        self.table.delete(self.id)
+        self.table.delete(self.oid)
+        self.oid = None
 
 
 class BasicTable(ABC):
@@ -42,19 +66,13 @@ class BasicTable(ABC):
             return self.client.key(self.kind, int(oid))
         return self.client.key(self.kind)
 
-    def _update(self, data, oid):
+    def update(self, data, oid=None):
         entity = datastore.Entity(
             key=self._get_key(oid),
             exclude_from_indexes=self.exclude_from_indexes)
         entity.update(data)
         self.client.put(entity)
         return entity
-
-    def update(self, data, oid):
-        return self._update(data, oid)
-
-    def create(self, data):
-        return self.update(data, None)
 
     def read(self, oid):
         return self.client.get(self._get_key(oid))
@@ -73,7 +91,10 @@ class BasicTable(ABC):
 
 
 class User(BasicEntry):
-    pass
+    def __init__(self, table, entity):
+        super().__init__(table, entity)
+        self.add_db_field('fbid', 0)
+        self.add_db_field('fbmsgseq', 0)
 
 
 class Users(BasicTable):
@@ -84,19 +105,6 @@ class Users(BasicTable):
         results = self.simple_query(fbid=fbid)
         if len(results) > 1:
             raise ValueError("FB ID must be unique")
-        return User(self, results[0]) if results else None
+        return User(self, entity=results[0]) if results else None
 
 
-class Chat(BasicEntry):
-    pass
-
-
-class Chats(BasicTable):
-    def __init__(self):
-        super().__init__(kind="Chats")
-
-    def by_fbid(self, fbid):
-        results = self.simple_query(fbid=fbid)
-        if len(results) > 1:
-            raise ValueError("FB ID must be unique")
-        return Chats(self, results[0]) if results else None

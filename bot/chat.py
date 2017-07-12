@@ -1,33 +1,65 @@
 import logging
-from datetime import datetime
 from abc import ABC, abstractmethod
 from enum import Enum
 from fbmq import QuickReply
-from bot.db_datastore import Chat, Chats
+from bot.db_datastore import BasicEntry, BasicTable
 
 
 CHAT_CLB_ID = 'CHAT_CLB'
 START_ACTION = 'Start'
 
-class BaseChat(ABC):
-    chats = Chats()
+class ChatTable(BasicTable):
+    def __init__(self):
+        super().__init__(kind="Chats")
+
+    def by_fbid(self, fbid):
+        return self.simple_query(fbid=fbid)
+
+class BaseChat(BasicEntry):
+    chats = ChatTable()
+    subs = {}
 
     @classmethod
-    def from_db(cls, payload):
-        instance = None
+    def addsub(cls, scls):
+        cls.subs[scls.__name__] = scls
+        return scls
+
+    @classmethod
+    def by_db_entity(cls, page, entity):
+        i = cls.subs[entity['class_name']](page)
+        i.from_entity(entity)
+        return i
+
+    @classmethod
+    def by_fbid(cls, page, fbid):
+        results = cls.chats.simple_query(fbid=fbid)
+        if results:
+            if len(results) > 1:
+                raise ValueError("FB ID must be unique")
+        return cls.by_db_entity(page, results[0])
+
+    @classmethod
+    def by_oid(cls, page, oid):
+        i = None
+        entity = cls.chats.read(oid)
+        if entity:
+            i = cls.by_db_entity(page, entity)
+        else:
+            logging.warning("from_db: cannot find dbs for id=%s", oid)
+        return i
+
+    @classmethod
+    def from_db(cls, page, payload):
+        i = None
         is_ok, class_name, oid, action_id = cls.parse_callback_payload(payload)
         if is_ok:
-            dbs = cls.chats.read(oid)
-            if dbs:
-                instance = classdict[class_name](dbs)
-            else:
-                logging.warning("from_db: cannot find dbs for id=%d", oid)
+            i = cls.by_oid(page, oid)
         else:
             logging.warning("from_db: incorrect payload: %s", payload)
-        return instance, action_id
+        return i, action_id
 
     def format_callback_payload(self, action_id):
-        return CHAT_CLB_ID + '/' + self.class_name() + '/' + str(self.dbs.id) + '/' + str(action_id)
+        return CHAT_CLB_ID + '/' + self.class_name + '/' + str(self.oid) + '/' + str(action_id)
 
     @staticmethod
     def parse_callback_payload(payload):
@@ -43,39 +75,35 @@ class BaseChat(ABC):
             action_id = params[3]
         return is_ok, class_name, oid, action_id
 
-    def __init__(self, page, fbid=None, dbs=None):
+    @classmethod
+    def cleanup(cls, fbid):
+        entities = cls.chats.by_fbid(fbid)
+        for e in entities:
+            cls.chats.delete(e.key.id)
+
+    @property
+    def class_name(self):
+        return type(self).__name__
+
+    def __init__(self, page, fbid=None):
+        super().__init__(self.chats)
         self.page = page
-        self.fbid = fbid
-        self.dbs = dbs
+        self.add_db_field('fbid', fbid)
+        self.add_db_property('class_name')
+        if fbid:
+            self.cleanup(fbid)
 
     def start(self):
-        if not self.dbs:
-            self.to_db()
-        else:
-            self.fbid = self.dbs.entry['fbid']
+        if not self.oid:
+            self.save()
         self.on_user_action(START_ACTION, None)
-
-    def to_dict(self):
-        return dict(cls = self.class_name(),
-                    fbid = self.fbid,
-                    timestamp = datetime.utcnow())
-
-    def to_db(self):
-        d = self.to_dict()
-        if not self.dbs:
-            self.dbs = Chat.create(self.chats, d)
-        else:
-            self.dbs.update(d)
-
-    @classmethod
-    def class_name(cls):
-        return cls.__name__
 
     @abstractmethod
     def on_user_action(self, action_id, event):
         pass
 
 
+@BaseChat.addsub
 class SelectChannelActionChat(BaseChat):
     start_actions = dict(
         ChList = 'List My Channels',
@@ -92,7 +120,7 @@ class SelectChannelActionChat(BaseChat):
                        "What do you want to do next?",
                        quick_replies=quick_replies,
                        metadata="DEVELOPER_DEFINED_METADATA")
-
+        self.save()
 
     def on_user_action(self, action_id, event):
         if action_id == START_ACTION:
@@ -101,11 +129,7 @@ class SelectChannelActionChat(BaseChat):
             logging.warning("on_user_action: %s arrived", action_id)
 
 
-classdict = {
-    'SelectChannelActionChat': SelectChannelActionChat
-    }
-
-
 def chat_clb_handler(page, payload, event):
-    instance, action_id = BaseChat.from_db(payload)
-    instance.on_user_action(action_id, event)
+    instance, action_id = BaseChat.from_db(page, payload)
+    if instance:
+        instance.on_user_action(action_id, event)

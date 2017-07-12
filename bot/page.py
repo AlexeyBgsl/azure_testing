@@ -19,16 +19,17 @@ def safe_event_seq(f):
     def wrapped(self, *args, **kwargs):
         for obj in args:
             if isinstance(obj, fbmq.Event):
-                user = self.create_or_update_user(obj.sender_id, obj.message_seq)
+                user = self.create_or_update_user(obj.sender_id)
                 if user:
-                    if not obj.message_seq or int(user.entity['fbmsgseq']) < obj.message_seq:
+                    if not obj.message_seq or user.fbmsgseq < obj.message_seq:
                         result = f(self, user, *args, **kwargs)
                         if obj.message_seq:
-                            user.update(fbmsgseq=obj.message_seq)
+                            user.fbmsgseq=obj.message_seq
+                        user.save()
                         return result
                     else:
                         logging.error("[U#%s] incorrect event seq: %s > %d",
-                                      obj.sender_id, user.entity['fbmsgseq'], obj.message_seq)
+                                      obj.sender_id, user.fbmsgseq, obj.message_seq)
                 else:
                     logging.error("[U#%s] cannot get user object", obj.sender_id)
 
@@ -82,19 +83,15 @@ class BotPage(fbmq.Page):
             fbmq.Template.ButtonPostBack('Help',
                                          MENU_ID + '/' + HELP_ID), ])
 
-    def _user_info_adjust(self, uinfo, fbid, seq):
-        uinfo['fbid'] = fbid
-        uinfo['fbmsgseq'] = seq if seq else 0
+    def _user_from_fb_profile(self, fbid):
+        user = User.create(self.users, self.get_user_profile(fbid))
+        user.fbid = fbid
+        return user
 
-    def _user_from_fb_profile(self, fbid, seq):
-        uinfo = self.get_user_profile(fbid)
-        self._user_info_adjust(uinfo, fbid, seq)
-        return User.create(self.users, uinfo)
-
-    def create_or_update_user(self, fbid, seq = None):
+    def create_or_update_user(self, fbid):
         user = self.users.by_fbid(fbid)
         if user is None:
-            user = self._user_from_fb_profile(fbid, seq)
+            user = self._user_from_fb_profile(fbid)
         return user
 
     @safe_event_seq
