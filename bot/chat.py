@@ -223,6 +223,7 @@ class BotChat(BaseChat):
         super().__init__(page, fbid)
         h = hierarchy if hierarchy else str(Hierarchy('RootChatStep'))
         self.add_db_field('hierarchy', h)
+        logging.debug("[U#%s] bot created (h=%s)", fbid, h)
 
     @property
     def hobj(self):
@@ -234,6 +235,7 @@ class BotChat(BaseChat):
             quick_replies.append(
                 QuickReply(title=c.title,
                            payload=self.format_callback_payload(c.action_id)))
+        logging.debug("[U#%s] CTAs sent: %r", self.fbid, quick_replies)
         self.page.send(self.fbid,
                        "What do you want to do next?",
                        quick_replies=quick_replies,
@@ -252,6 +254,7 @@ class BotChat(BaseChat):
         if cta_cls:
             self.hierarchy = str(self.hobj.level_up(class_name))
             self.save()
+            logging.debug("[U#%s] level up: %s", self.fbid, self.hierarchy)
             self._ask_for_cta(cta_cls)
 
     def level_down(self):
@@ -262,18 +265,27 @@ class BotChat(BaseChat):
         if hobj.nof_levels > 1:
             self._ask_for_cta(self.current_level_cls)
         else:
-            logging.warning("%s: rolled back to menu", self.class_name)
+            logging.warning("%s: cannot level down: %s", self.hierarchy)
 
     def on_user_action(self, action_id, event):
         if action_id == BackCallToAction.ACTION_ID:
+            logging.debug("[U#%s] back action received: %s",
+                          self.fbid, self.hierarchy)
             self.level_down()
         else:
             cls = self.current_level_cls
             next_level_class_name = cls.on_action(action_id, event)
+            logging.debug("[U#%s] %s action received: %s",
+                          self.fbid, action_id, self.hierarchy)
             self.level_up(next_level_class_name)
 
 
 def chat_clb_handler(page, payload, event):
     instance, action_id = BaseChat.from_db(page, payload)
     if instance:
+        logging.debug("[U#%s] bot instance reconstructed: %s",
+                      event.sender_id, payload)
         instance.on_user_action(action_id, event)
+    else:
+        logging.warning("[U#%s] cannot reconstruct bot instance: %s",
+                        event.sender_id, payload)
