@@ -71,6 +71,14 @@ class BackCallToAction(CallToAction):
         super().__init__(title, self.ACTION_ID, self.CLS_NAME)
 
 
+class NoCallToAction(CallToAction):
+    CLS_NAME = 'NoCTAClass'
+    ACTION_ID = 'NoCTAAction'
+
+    def __init__(self, title):
+        super().__init__(title, self.ACTION_ID, self.CLS_NAME)
+
+
 class BasicChatStep(ABC):
     CTA = []
 
@@ -116,9 +124,9 @@ class RootChatStep(BasicChatStep):
 @step_collection.register
 class FirstChannelsChatStep(BasicChatStep):
     CTA = [
-        CallToAction('List My Channels', 'ChList', 'FirstChannelsChatStep'),
-        CallToAction('Subscribe', 'ChSub', 'FirstAnnouncementsChatStep'),
-        CallToAction('Unsubscribe', 'ChUnSub', 'FirstHelpChatStep'),
+        NoCallToAction('List My Channels'),
+        NoCallToAction('Subscribe'),
+        NoCallToAction('Unsubscribe'),
         BackCallToAction()
     ]
 
@@ -272,6 +280,10 @@ class BotChat(BaseChat):
             logging.debug("[U#%s] back action received: %s",
                           self.fbid, self.hierarchy)
             self.level_down()
+        elif action_id == NoCallToAction.ACTION_ID:
+            logging.debug("[U#%s] no action received: %s",
+                          self.fbid, self.hierarchy)
+            self._ask_for_cta(self.current_level_cls)
         else:
             cls = self.current_level_cls
             next_level_class_name = cls.on_action(action_id, event)
