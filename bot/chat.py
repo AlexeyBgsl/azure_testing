@@ -36,7 +36,7 @@ class Hierarchy():
 
     @property
     def nof_levels(self):
-        return self.hstr.count(self.DELIMITER)
+        return self.hstr.count(self.DELIMITER) + 1
 
     def get_current_level(self):
         pos = self.hstr.rfind(self.DELIMITER)
