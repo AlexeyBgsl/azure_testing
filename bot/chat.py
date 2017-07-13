@@ -27,42 +27,33 @@ class ClassCollection(object):
 class Hierarchy():
     DELIMITER = '.'
 
-    @classmethod
-    def from_string(cls, path):
-        return cls(path.split(cls.DELIMITER))
-
-    def __init__(self, path=[]):
-        self.path = path
-
-    @property
-    def string(self):
-        path = ''
-        for p in self.path:
-            if path == '':
-                path = p
-            else:
-                path += self.DELIMITER + p
-        return path
+    def __init__(self, str):
+        self.hstr = str
 
     @property
     def is_empty(self):
-        return len(self.path) == 0
+        return not self.hstr
 
     @property
     def nof_levels(self):
-        return len(self.path)
+        return self.hstr.count(self.DELIMITER)
 
     def get_current_level(self):
-        return self.path[self.nof_levels - 1]
+        pos = self.hstr.rfind(self.DELIMITER)
+        return self.hstr[pos + 1:]
 
     def level_up(self, next_level):
-        self.path.append(next_level)
+        if self.is_empty:
+            self.hstr = next_level
+        else:
+            self.hstr += self.DELIMITER + next_level
 
     def level_down(self):
-        return self.path.pop()
+        pos = self.hstr.rfind(self.DELIMITER)
+        self.hstr = self.hstr[:pos] if pos != -1 else ''
 
     def __str__(self):
-        return self.string
+        return self.hstr
 
 
 class CallToAction(object):
@@ -230,12 +221,12 @@ class BotChat(BaseChat):
 
     def __init__(self, page, fbid=None, hierarchy=None):
         super().__init__(page, fbid)
-        h = hierarchy if hierarchy else str(Hierarchy(['RootChatStep']))
+        h = hierarchy if hierarchy else str(Hierarchy('RootChatStep'))
         self.add_db_field('hierarchy', h)
 
     @property
     def hobj(self):
-        return Hierarchy.from_string(self.hierarchy)
+        return Hierarchy(self.hierarchy)
 
     def _ask_for_cta(self, cls):
         quick_replies = []
