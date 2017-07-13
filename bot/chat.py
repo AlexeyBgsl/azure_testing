@@ -47,10 +47,12 @@ class Hierarchy():
             self.hstr = next_level
         else:
             self.hstr += self.DELIMITER + next_level
+        return self.hstr
 
     def level_down(self):
         pos = self.hstr.rfind(self.DELIMITER)
         self.hstr = self.hstr[:pos] if pos != -1 else ''
+        return self.hstr
 
     def __str__(self):
         return self.hstr
@@ -262,18 +264,21 @@ class BotChat(BaseChat):
     def level_up(self, class_name):
         cta_cls = step_collection.cls(class_name)
         if cta_cls:
-            self.hierarchy = str(self.hobj.level_up(class_name))
+            self.hierarchy = self.hobj.level_up(class_name)
             self.save()
             logging.debug("[U#%s] level up: %s", self.fbid, self.hierarchy)
             self._ask_for_cta(cta_cls)
 
     def level_down(self):
         hobj = self.hobj
-        assert hobj.nof_levels > 1, "%s: there's no level down" % str(self.hierarchy)
-        self.hierarchy = str(hobj.level_down())
-        self.save()
         if hobj.nof_levels > 1:
-            self._ask_for_cta(self.current_level_cls)
+            self.hierarchy = hobj.level_down()
+            self.save()
+            logging.debug("[U#%s] level down: %s", self.fbid, self.hierarchy)
+            if hobj.nof_levels > 1:
+                self._ask_for_cta(self.current_level_cls)
+            else:
+                logging.info("%s: rolled back to menu", self.class_name)
         else:
             logging.warning("%s: cannot level down: %s", self.hierarchy)
 
