@@ -204,12 +204,14 @@ class BaseChat(BasicEntry):
         return type(self).__name__
 
     def __init__(self, page, fbid=None, entity=None):
-        super().__init__(self.chats, entity=entity)
+        super().__init__(self.chats)
         self.page = page
         self.add_db_field('fbid', fbid)
-        self.add_db_property('class_name')
+        self.add_db_field('class_name')
         if fbid:
             self.cleanup(fbid)
+        if (entity):
+            self.from_entity(entity)
 
     def start(self):
         if not self.oid:

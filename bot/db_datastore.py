@@ -14,12 +14,11 @@ class BasicEntry(ABC):
         if not name in self.db_fields:
             self.db_fields.append(name)
 
-    def add_db_field(self, name, default = None):
-        if not hasattr(self, name):
-            setattr(self, name, default)
-        self.__add_db_property(name)
-
-    def add_db_property(self, name):
+    def add_db_field(self, name, val = None):
+        try:
+            setattr(self, name, val)
+        except AttributeError:
+            pass
         self.__add_db_property(name)
 
     def from_entity(self, e):
@@ -28,13 +27,11 @@ class BasicEntry(ABC):
             if key != 'key':
                 self.add_db_field(key, e[key])
 
-    def __init__(self, table, entity=None):
+    def __init__(self, table):
         """Constructor"""
         self.table = table
         self.oid = None
         self.db_fields = []
-        if entity:
-            self.from_entity(entity)
 
     def to_dict(self):
         d = {}
@@ -92,9 +89,11 @@ class BasicTable(ABC):
 
 class User(BasicEntry):
     def __init__(self, table, entity):
-        super().__init__(table, entity)
+        super().__init__(table)
         self.add_db_field('fbid', 0)
         self.add_db_field('fbmsgseq', 0)
+        if entity:
+            self.from_entity(entity)
 
 
 class Users(BasicTable):
