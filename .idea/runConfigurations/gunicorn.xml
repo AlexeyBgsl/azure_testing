@@ -3,8 +3,8 @@
     <option name="INTERPRETER_OPTIONS" value="" />
     <option name="PARENT_ENVS" value="true" />
     <envs>
-      <env name="GUNICORN_CMD_ARGS" value="-w 1 -b 127.0.0.1:5000" />
       <env name="PYTHONUNBUFFERED" value="1" />
+      <env name="GUNICORN_CMD_ARGS" value="-w 1 -b 127.0.0.1:5000" />
     </envs>
     <option name="SDK_HOME" value="$PROJECT_DIR$/env/bin/python" />
     <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/" />
