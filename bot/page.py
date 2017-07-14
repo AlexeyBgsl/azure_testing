@@ -3,9 +3,14 @@ import fbmq
 import functools
 from bot.config import CONFIG
 from bot.db_datastore import Users, User
-from bot.chat import CHAT_CLB_ID, chat_clb_handler, BotChat
+from bot.chat import (
+    BotChatClbTypes,
+    chat_clb_handler,
+    chat_menu_handler,
+    BotChat
+)
 
-MENU_ID = "MENU"
+START_PAYLOAD = "LOCANOBOT_START"
 
 HELP_MESSAGE = ("This is Locano. We help you to make and receive "
                 "announcements")
@@ -71,11 +76,10 @@ class BotPage(fbmq.Page):
         self.users = Users()
         super().__init__(CONFIG['ACCESS_TOKEN'])
         self.greeting("Hi {{user_first_name}}, welcome to Locano Chatbot!")
-        self.show_starting_button("Show Help")
-        buttons = []
-        for b in BotChat.root_menu():
-            buttons.append(fbmq.Template.ButtonPostBack(b.title, MENU_ID + '/' + b.action_id))
-        self.show_persistent_menu(buttons)
+        self.show_starting_button(START_PAYLOAD)
+
+    def start(self):
+        BotChat(self).start()
 
     def _user_from_fb_profile(self, fbid):
         user = User.create(self.users, self.get_user_profile(fbid))
@@ -137,21 +141,13 @@ class BotPage(fbmq.Page):
                       payload.recipient.id,
                       payload.message.text)
 
-    @safe_event_seq
-    @dump_member_func
-    def on_menu(self, user, payload, event):
-        sender_id = event.sender_id
-        item_id = payload.split('/')[1]
-        logging.debug("[U#%s] [on_menu] %s", sender_id, item_id)
-        BotChat(page, fbid=sender_id).start(item_id, event)
-
 
 page = BotPage()
 
 
-@page.callback([MENU_ID + '/(.+)'])
-def click_persistent_menu(payload, event):
-    page.on_menu(payload, event)
+@page.callback([BotChatClbTypes['ClbMenu'] + '/(.+)'])
+def menu_handler(payload, event):
+    chat_menu_handler(page, payload, event)
 
 
 @page.handle_message
@@ -189,6 +185,10 @@ def after_send(payload, response):
     page.on_after_send(payload, response)
 
 
-@page.callback([CHAT_CLB_ID + '/(.+)'])
+@page.callback([BotChatClbTypes['ClbQRep'] + '/(.+)'])
 def chat_callback_handler(payload, event):
     chat_clb_handler(page, payload, event)
+
+@page.callback([START_PAYLOAD])
+def start_callback(payload, event):
+    page.start()
