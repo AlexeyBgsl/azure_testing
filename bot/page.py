@@ -9,11 +9,9 @@ from bot.chat import (
     chat_menu_handler,
     BotChat
 )
+from bot.translations import StringId, BotString
 
 START_PAYLOAD = "LOCANOBOT_START"
-
-HELP_MESSAGE = ("This is Locano. We help you to make and receive "
-                "announcements")
 
 
 def safe_event_seq(f):
@@ -75,7 +73,7 @@ class BotPage(fbmq.Page):
     def __init__(self):
         self.users = Users()
         super().__init__(CONFIG['ACCESS_TOKEN'])
-        self.greeting("Hi {{user_first_name}}, welcome to Locano Chatbot!")
+        self.greeting(str(BotString(StringId.SID_GREETING)))
         self.show_starting_button(START_PAYLOAD)
         self.show_persistent_menu(BotChat.get_menu_buttons())
 

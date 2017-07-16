@@ -1,6 +1,7 @@
 import logging
 from abc import ABC, abstractmethod
 from fbmq import QuickReply, Template
+from bot.translations import StringId, BotString
 
 CHAT_CLB_ID = 'CHAT_CLB'
 CHAT_MENU_ID = 'CHAT_MENU'
@@ -56,18 +57,22 @@ class ClassCollection(object):
 
 
 class CallToAction(object):
-    def __init__(self, title, action_id, class_name):
-        self.title = title
+    def __init__(self, title_sid, action_id, class_name):
+        self.title_sid = title_sid
         self.action_id = action_id
         self.class_name = class_name
+
+    @property
+    def title(self):
+        return str(BotString(self.title_sid))
 
 
 class NoCallToAction(CallToAction):
     CLS_NAME = 'IdleChatState'
     ACTION_ID = 'CTANoActionID'
 
-    def __init__(self, title):
-        super().__init__(title, self.ACTION_ID, self.CLS_NAME)
+    def __init__(self, title_sid):
+        super().__init__(title_sid, self.ACTION_ID, self.CLS_NAME)
 
 
 class BasicChatState(ABC):
@@ -138,7 +143,7 @@ class RootChatState(BasicChatState):
     ]
 
     def get_message(self):
-        return 'What do you want to do next?', None
+        return str(BotString(StringId.SID_SELECT_ACTION)), None
 
 
 @step_collection.register
@@ -155,7 +160,7 @@ class FirstChannelsChatState(BasicChatState):
     ]
 
     def get_message(self):
-        return 'What do you want to do next?', None
+        return str(BotString(StringId.SID_SELECT_ACTION)), None
 
 
 @step_collection.register
