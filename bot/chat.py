@@ -207,11 +207,11 @@ class BotChat(object):
             self.state.show(event.sender_id)
 
 
-def chat_clb_handler(page, payload, event):
+def chat_clb_handler(user, page, payload, event):
     logging.debug("[U#%s] Clb Handler: %s", event.sender_id, payload)
     BotChat.clb_by_payload(page, payload, event)
 
 
-def chat_menu_handler(page, payload, event):
+def chat_menu_handler(user, page, payload, event):
     logging.debug("[U#%s] Menu Handler: %s", event.sender_id, payload)
     BotChat.clb_by_payload(page, payload, event)

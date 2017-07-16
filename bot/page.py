@@ -94,6 +94,21 @@ class BotPage(fbmq.Page):
 
     @safe_event_seq
     @dump_member_func
+    def on_start(self, user, event):
+        return BotChat(self, user).start(event)
+
+    @safe_event_seq
+    @dump_member_func
+    def on_chat_menu(self, user, page, payload, event):
+        return chat_menu_handler(user, page, payload, event)
+
+    @safe_event_seq
+    @dump_member_func
+    def on_chat_callback(self, user, page, payload, event):
+        return chat_clb_handler(user, page, payload, event)
+
+    @safe_event_seq
+    @dump_member_func
     def on_message(self, user, event):
         sender_id = event.sender_id
         if event.is_quick_reply:
@@ -147,7 +162,7 @@ page = BotPage()
 
 @page.callback([BotChatClbTypes['ClbMenu'] + '/(.+)'])
 def menu_handler(payload, event):
-    chat_menu_handler(page, payload, event)
+    page.on_chat_menu(page, payload, event)
 
 
 @page.handle_message
@@ -187,8 +202,8 @@ def after_send(payload, response):
 
 @page.callback([BotChatClbTypes['ClbQRep'] + '/(.+)'])
 def chat_callback_handler(payload, event):
-    chat_clb_handler(page, payload, event)
+    page.on_chat_callback(page, payload, event)
 
 @page.callback([START_PAYLOAD])
 def start_callback(payload, event):
-    page.start()
+    page.on_start(event)
