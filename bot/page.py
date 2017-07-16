@@ -77,9 +77,7 @@ class BotPage(fbmq.Page):
         super().__init__(CONFIG['ACCESS_TOKEN'])
         self.greeting("Hi {{user_first_name}}, welcome to Locano Chatbot!")
         self.show_starting_button(START_PAYLOAD)
-
-    def start(self):
-        BotChat(self).start()
+        self.show_persistent_menu(BotChat.get_menu_buttons())
 
     def _user_from_fb_profile(self, fbid):
         user = User.create(self.users, self.get_user_profile(fbid))

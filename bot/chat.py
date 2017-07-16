@@ -71,7 +71,6 @@ class NoCallToAction(CallToAction):
 
 
 class BasicChatState(ABC):
-    MENU_CTA = []
     QREP_CTA = []
 
     @classmethod
@@ -85,32 +84,21 @@ class BasicChatState(ABC):
             qreps.append(QuickReply(cta.title, str(p)))
         return qreps
 
-    def _show_menu(self):
-        if len(self.MENU_CTA):
-            buttons = []
-            for cta in self.MENU_CTA:
-                p = Payload('ClbMenu', self.class_name(), cta.action_id)
-                buttons.append(Template.ButtonPostBack(cta.title, str(p)))
-            self.page.show_persistent_menu(buttons)
-        else:
-            self.page.hide_persistent_menu()
-
     def _send(self, fbid, message, metadata = None):
         qreps = self._prepare_qreps()
         self.page.send(fbid, message, quick_replies=qreps, metadata=metadata)
 
-    def __init__(self, page):
+    def __init__(self, page, user):
         self.page = page
+        self.user = user
 
     def get_message(self):
         return None, None
 
-    def show(self, fbid=None):
-        self._show_menu()
-        if fbid:
-            message, metadata = self.get_message()
-            if message:
-                self._send(fbid, message, metadata)
+    def show(self):
+        message, metadata = self.get_message()
+        if message:
+            self._send(self.user.fbid, message, metadata)
 
     def on_action_done(self, cta, event):
         pass
@@ -120,8 +108,6 @@ class BasicChatState(ABC):
                       self.class_name(), type, action_id)
         if type == 'ClbQRep':
             ctas = self.QREP_CTA
-        elif type == 'ClbMenu':
-            ctas = self.MENU_CTA
         else:
             logging.warning("%s: on_action(%s): unknown type",
                             self.class_name(), type)
@@ -142,12 +128,14 @@ step_collection = ClassCollection()
 
 @step_collection.register
 class RootChatState(BasicChatState):
-    MENU_CTA = [
-        CallToAction('Channels', 'RtChls', 'FirstChannelsChatState'),
-        CallToAction('Announcements', 'RtAnns', 'FirstAnnouncementsChatState'),
-        CallToAction('Help', 'RtHelp', 'FirstHelpChatState'),
+    QREP_CTA = [
+        CallToAction(StringId.SID_MENU_CHANNELS,
+                     'RtChls', 'FirstChannelsChatState'),
+        CallToAction(StringId.SID_MENU_ANNOUNCEMENTS,
+                     'RtAnns', 'FirstAnnouncementsChatState'),
+        CallToAction(StringId.SID_MENU_HELP,
+                     'RtHelp', 'FirstHelpChatState'),
     ]
-    QREP_CTA = MENU_CTA
 
     def get_message(self):
         return 'What do you want to do next?', None
@@ -160,12 +148,11 @@ class IdleChatState(RootChatState):
 
 @step_collection.register
 class FirstChannelsChatState(BasicChatState):
-    MENU_CTA = [
-        NoCallToAction('List My Channels'),
-        NoCallToAction('Subscribe'),
-        NoCallToAction('Unsubscribe')
+    QREP_CTA = [
+        NoCallToAction(StringId.SID_LIST_MY_CHANNELS),
+        NoCallToAction(StringId.SID_SUBSCRIBE),
+        NoCallToAction(StringId.SID_UNSUBSCRIBE)
     ]
-    QREP_CTA = MENU_CTA
 
     def get_message(self):
         return 'What do you want to do next?', None
@@ -177,41 +164,77 @@ class FirstAnnouncementsChatState(BasicChatState):
 
 
 class BotChat(object):
+    MENU_CTA = [
+        CallToAction(StringId.SID_MENU_CHANNELS,
+                     'RtChls', 'FirstChannelsChatState'),
+        CallToAction(StringId.SID_MENU_ANNOUNCEMENTS,
+                     'RtAnns', 'FirstAnnouncementsChatState'),
+        CallToAction(StringId.SID_MENU_HELP,
+                     'RtHelp', 'FirstHelpChatState'),
+    ]
+
     @classmethod
-    def clb_by_payload(cls, page, payload, event):
+    def class_name(cls):
+        return cls.__name__
+
+    @classmethod
+    def clb_by_payload(cls, user, page, payload, event):
         logging.debug("[U#%s] clb arrived: %s",
                       event.sender_id, payload)
         p = Payload.from_string(payload)
         if p:
-            cls(page, scls_name=p.class_name).on_action(p.type,
-                                                        p.action_id,
-                                                        event)
+            cls(page, user, scls_name=p.class_name).on_action(p.type,
+                                                              p.action_id,
+                                                              event)
         else:
             logging.warning("[U#%s] clb: bad payload: %s",
                             event.sender_id, payload)
 
-    def __init__(self, page, scls_name=None):
+    @classmethod
+    def get_menu_buttons(cls):
+        buttons = []
+        for cta in cls.MENU_CTA:
+            p = Payload('ClbMenu', cls.class_name(), cta.action_id)
+            buttons.append(Template.ButtonPostBack(cta.title, str(p)))
+        return buttons
+
+    def _on_menu(self, action_id, event):
+        for cta in self.MENU_CTA:
+            if cta.action_id == action_id:
+                logging.debug("%s: next CTA: %s",
+                              self.class_name(), cta.class_name)
+                return cta.class_name
+
+    def __init__(self, page, user, scls_name=None):
         self.page = page
+        self.user = user
         self.instantiate_state(scls_name if scls_name else 'RootChatState')
 
     def instantiate_state(self, class_name):
-        self.state = step_collection.instantiate(class_name, self.page)
+        self.state = step_collection.instantiate(class_name,
+                                                 self.page,
+                                                 self.user)
 
-    def start(self):
+    def start(self, event):
         self.state.show()
 
     def on_action(self, type, action_id, event):
-        next_state = self.state.on_action(type, action_id, event)
+        logging.debug("%s: on_action(%s): %s arrived",
+                      self.class_name(), type, action_id)
+        if type == 'ClbMenu':
+            next_state = self._on_menu(action_id, event)
+        else:
+            next_state = self.state.on_action(type, action_id, event)
         if next_state:
             self.instantiate_state(next_state)
-            self.state.show(event.sender_id)
+            self.state.show()
 
 
 def chat_clb_handler(user, page, payload, event):
     logging.debug("[U#%s] Clb Handler: %s", event.sender_id, payload)
-    BotChat.clb_by_payload(page, payload, event)
+    BotChat.clb_by_payload(user, page, payload, event)
 
 
 def chat_menu_handler(user, page, payload, event):
     logging.debug("[U#%s] Menu Handler: %s", event.sender_id, payload)
-    BotChat.clb_by_payload(page, payload, event)
+    BotChat.clb_by_payload(user, page, payload, event)

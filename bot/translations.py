@@ -43,6 +43,25 @@ class AutoNumber(Enum):
 
 class StringId(AutoNumber):
     SID_GREETING = ()
+    SID_SELECT_ACTION = ()
+    SID_MENU_CHANNELS = ()
+    SID_MENU_ANNOUNCEMENTS = ()
+    SID_MENU_HELP = ()
+    SID_LIST_MY_CHANNELS = ()
+    SID_SUBSCRIBE = ()
+    SID_UNSUBSCRIBE = ()
+
+
+DefaultStrings = dict(
+    SID_GREETING='Hi {{user_first_name}}, welcome to Locano Chatbot',
+    SID_SELECT_ACTION='What do you want to do next?',
+    SID_MENU_CHANNELS='Channels',
+    SID_MENU_ANNOUNCEMENTS='Announcements',
+    SID_MENU_HELP='Help',
+    SID_LIST_MY_CHANNELS='List My Channels',
+    SID_SUBSCRIBE='Subscribe',
+    SID_UNSUBSCRIBE='Unsubscribe',
+)
 
 
 class Strings(BasicTable):
