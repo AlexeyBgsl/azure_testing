@@ -5,6 +5,7 @@ import logging
 from flask import Flask
 from bot.webhook import botbp
 from bot.config import CONFIG
+from bot.translations import String, StringId
 
 BOT_ROOT = '/bot'
 
