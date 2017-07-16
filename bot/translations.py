@@ -24,6 +24,22 @@ class AutoNumber(Enum):
             return True if cls.from_sid_name(sid) else False
         return False
 
+    @classmethod
+    def check_default_strings(cls):
+        for sid in cls:
+            if sid.name not in DefaultStrings:
+                raise ValueError(
+                    '{} must be in DefaultStrings'.format(sid.name))
+
+
+    @classmethod
+    def default_strings_to_db(cls, override=False):
+        for sid in cls:
+            s = String(sid)
+            if not s.in_db or override:
+                s.set(String.DEFAULT_LOCALE, DefaultStrings[sid.name])
+                s.save()
+
 
 class StringId(AutoNumber):
     SID_GREETING = ()

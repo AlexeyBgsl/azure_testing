@@ -24,7 +24,8 @@ def int_val(s):
 
 parser = argparse.ArgumentParser()
 parser.add_argument("command", help="command to execute",
-                    choices=['list_db', 'list_ids', 'show', 'set', 'remove'])
+                    choices=['list_db', 'list_ids', 'check', 'fill',
+                             'show', 'set', 'remove'])
 parser.add_argument("-s", "--sid", help="String ID")
 parser.add_argument("-l", "--lang", help="language")
 parser.add_argument("-t", "--text", help="text")
@@ -41,6 +42,10 @@ elif args.command == 'list_ids':
     for sid in StringId:
         s = String(sid)
         print_string(s)
+elif args.command == 'check':
+    StringId.check_default_strings()
+elif args.command == 'fill':
+    StringId.default_strings_to_db()
 else:
     if not args.sid:
         raise ValueError("Please specify String ID")
