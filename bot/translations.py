@@ -60,6 +60,7 @@ class String(BasicEntry):
     table = Strings()
     LOCALE_MARKER = 'locale'
     LOCALE_DELIMITER = '.'
+    DEFAULT_LOCALE = 'en_US'
 
     @classmethod
     def locale_aname(cls, locale):
@@ -105,7 +106,23 @@ class String(BasicEntry):
         self.add_db_field(self.locale_aname(locale), text)
 
     def get(self, locale):
-        return getattr(self, self.locale_aname(locale))
+        try:
+            return getattr(self, self.locale_aname(locale))
+        except AttributeError:
+            return None
+
+    def get_safe(self, locale):
+        if locale:
+            s = self.get(locale) # get from locale
+            if s:
+                return s
+
+        if not locale or locale != self.DEFAULT_LOCALE:
+            s = self.get(self.DEFAULT_LOCALE)  # get from default locale
+            if s:
+                return s
+
+        return DefaultStrings[self.sid]  # get default
 
     def list(self):
         l = []
@@ -114,3 +131,16 @@ class String(BasicEntry):
             if locale:
                 l.append(locale)
         return l
+
+
+class BotString(String):
+    def __init__(self, sid, locale=None):
+        super().__init__(sid)
+        self.locale = locale
+
+    @property
+    def string(self):
+        return self.get_safe(self.locale)
+
+    def __str__(self):
+        return self.get_safe(self.locale)
