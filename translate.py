@@ -2,15 +2,14 @@ import argparse
 from bot import String, StringId
 
 
-def sid_name(sid):
-    for s in StringId:
-        if s.value == int(sid):
-            return s.name
-    return 'Unknown'
+def normalized_sid_name(sid_name):
+    if StringId.from_sid_name(sid_name):
+        return sid_name
+    return '*' + sid_name
 
 
 def print_string(s):
-    print('String#{oid} {sid}'.format(oid=s.oid, sid=sid_name(s.sid)))
+    print('{sid} {oid:015d}'.format(sid=normalized_sid_name(s.sid), oid=s.oid))
     locales = s.list()
     for l in locales:
         print('    {} {}'.format(l, s.get(l)))
@@ -25,41 +24,30 @@ def int_val(s):
 
 parser = argparse.ArgumentParser()
 parser.add_argument("command", help="command to execute",
-                    choices=['list', 'show', 'set', 'remove'])
+                    choices=['list_db', 'list_ids', 'show', 'set', 'remove'])
 parser.add_argument("-s", "--sid", help="String ID")
 parser.add_argument("-l", "--lang", help="language")
 parser.add_argument("-t", "--text", help="text")
 
 args = parser.parse_args()
 
-if args.command == 'list':
+if args.command == 'list_db':
     results = String.all()
-    print('Following strings are in table')
+    print('Following strings are in table:')
     for s in results:
+        print_string(s)
+elif args.command == 'list_ids':
+    print('Following String IDs exist:')
+    for sid in StringId:
+        s = String(sid)
         print_string(s)
 else:
     if not args.sid:
         raise ValueError("Please specify String ID")
 
-    sid = int_val(args.sid)
-    if sid:
-        if sid <= StringId.SID_NONE.value:
-            raise ValueError(
-                "String ID must be greater than {}".format(StringId.SID_NONE))
-        elif sid >= StringId.SID_LAST.value:
-            raise ValueError(
-                "String ID must be less than {}".format(StringId.SID_LAST))
-
-        print("Setting " + sid_name(sid))
-    else:
-        for s in StringId:
-            if s.name == args.sid:
-                if args.sid == StringId.SID_NONE.name or \
-                                args.sid == StringId.SID_LAST.name:
-                    raise ValueError(
-                        "Invalid String ID {}".format(args.sid))
-                sid = s.value
-                break
+    if not StringId.is_valid(args.sid):
+        raise ValueError(
+            "Invalid String ID {}".format(args.sid))
 
     if args.command == 'show':
         s = String(args.sid)

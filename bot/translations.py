@@ -9,11 +9,24 @@ class AutoNumber(Enum):
         obj._value_ = value
         return obj
 
+    @classmethod
+    def from_sid_name(cls, sid_name):
+        try:
+            return cls[sid_name]
+        except KeyError:
+            return None
+
+    @classmethod
+    def is_valid(cls, sid):
+        if isinstance(sid, cls):
+            return True
+        if isinstance(sid, str):
+            return True if cls.from_sid_name(sid) else False
+        return False
+
 
 class StringId(AutoNumber):
-    SID_NONE = ()
     SID_GREETING = ()
-    SID_LAST = ()
 
 
 class Strings(BasicTable):
@@ -55,7 +68,7 @@ class String(BasicEntry):
 
     def __init__(self, sid=None):
         super().__init__(self.table)
-        self.add_db_field('sid', 0)
+        self.add_db_field('sid', '')
         if sid:
             self.load(sid)
 
@@ -64,11 +77,12 @@ class String(BasicEntry):
         return self.oid is not None
 
     def load(self, sid):
-        e = self.table.by_sid(sid)
+        ssid = sid.name if isinstance(sid, StringId) else sid
+        e = self.table.by_sid(ssid)
         if e:
             self.from_entity(e)
             return True
-        self.sid = sid
+        self.sid = ssid
         return False
 
     def set(self, locale, text):
