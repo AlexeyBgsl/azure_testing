@@ -148,8 +148,8 @@ class RootChatState(BasicChatState):
 
 
 @step_collection.register
-class IdleChatState(RootChatState):
-    pass
+class IdleChatState(BasicChatState):
+    MSG_STR_ID = StringId.SID_DBG_NO_ACTION
 
 
 @step_collection.register
