@@ -57,10 +57,10 @@ class ClassCollection(object):
 
 
 class CallToAction(object):
-    def __init__(self, title_sid, action_id, class_name):
+    def __init__(self, title_sid, class_name, action_id=None):
         self.title_sid = title_sid
-        self.action_id = action_id
         self.class_name = class_name
+        self.action_id = action_id if action_id else class_name
 
     @property
     def title(self):
@@ -69,10 +69,9 @@ class CallToAction(object):
 
 class NoCallToAction(CallToAction):
     CLS_NAME = 'IdleChatState'
-    ACTION_ID = 'CTANoActionID'
 
     def __init__(self, title_sid):
-        super().__init__(title_sid, self.ACTION_ID, self.CLS_NAME)
+        super().__init__(title_sid, self.CLS_NAME)
 
 
 class BasicChatState(ABC):
@@ -135,11 +134,11 @@ step_collection = ClassCollection()
 class RootChatState(BasicChatState):
     QREP_CTA = [
         CallToAction(StringId.SID_MENU_CHANNELS,
-                     'RtChls', 'FirstChannelsChatState'),
+                     'FirstChannelsChatState'),
         CallToAction(StringId.SID_MENU_ANNOUNCEMENTS,
-                     'RtAnns', 'FirstAnnouncementsChatState'),
+                     'FirstAnnouncementsChatState'),
         CallToAction(StringId.SID_MENU_HELP,
-                     'RtHelp', 'FirstHelpChatState'),
+                     'FirstHelpChatState'),
     ]
 
     def get_message(self):
@@ -171,11 +170,11 @@ class FirstAnnouncementsChatState(BasicChatState):
 class BotChat(object):
     MENU_CTA = [
         CallToAction(StringId.SID_MENU_CHANNELS,
-                     'RtChls', 'FirstChannelsChatState'),
+                     'FirstChannelsChatState'),
         CallToAction(StringId.SID_MENU_ANNOUNCEMENTS,
-                     'RtAnns', 'FirstAnnouncementsChatState'),
+                     'FirstAnnouncementsChatState'),
         CallToAction(StringId.SID_MENU_HELP,
-                     'RtHelp', 'FirstHelpChatState'),
+                     'FirstHelpChatState'),
     ]
 
     @classmethod
