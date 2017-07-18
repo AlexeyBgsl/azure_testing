@@ -137,14 +137,13 @@ step_collection = ClassCollection()
 @step_collection.register
 class RootChatState(BasicChatState):
     QREP_CTA = [
-        CallToAction(StringId.SID_MENU_CHANNELS,
-                     'FirstChannelsChatState'),
-        CallToAction(StringId.SID_MENU_ANNOUNCEMENTS,
-                     'FirstAnnouncementsChatState'),
-        CallToAction(StringId.SID_MENU_HELP,
-                     'FirstHelpChatState'),
+        CallToAction(StringId.SID_BROWSE_CHANNELS,
+                     'BrowseChannelsChatState'),
+        CallToAction(StringId.SID_MY_CHANNELS,
+                     'MyChannelsChatState'),
+        NoCallToAction(StringId.SID_MAKE_ANNOUNCEMENT),
     ]
-    MSG_STR_ID = StringId.SID_SELECT_ACTION
+    MSG_STR_ID = StringId.SID_ROOT_PROMPT
 
 
 @step_collection.register
@@ -153,28 +152,56 @@ class IdleChatState(BasicChatState):
 
 
 @step_collection.register
-class FirstChannelsChatState(BasicChatState):
+class RootChannelsChatState(BasicChatState):
     QREP_CTA = [
-        NoCallToAction(StringId.SID_LIST_MY_CHANNELS),
-        NoCallToAction(StringId.SID_SUBSCRIBE),
-        NoCallToAction(StringId.SID_UNSUBSCRIBE)
+        CallToAction(StringId.SID_BROWSE_CHANNELS,
+                     'BrowseChannelsChatState'),
+        CallToAction(StringId.SID_MY_CHANNELS,
+                     'MyChannelsChatState'),
+        CallToAction(StringId.SID_CHANNELS_HELP,
+                     'ChannelsHelpChatState'),
     ]
-    MSG_STR_ID = StringId.SID_SELECT_ACTION
+    MSG_STR_ID = StringId.SID_CHANNELS_PROMPT
 
 
 @step_collection.register
-class FirstAnnouncementsChatState(BasicChatState):
-    pass
+class ChannelsHelpChatState(BasicChatState):
+    QREP_CTA = [
+        NoCallToAction(StringId.SID_HELP_CHANNEL_DETAILS),
+        NoCallToAction(StringId.SID_HELP_CHANNEL_EXAMPLES)
+    ]
+    MSG_STR_ID = StringId.SID_HELP_CHANNELS_PROMPT
+
+
+@step_collection.register
+class BrowseChannelsChatState(BasicChatState):
+    QREP_CTA = [
+        NoCallToAction(StringId.SID_BROWSE_NEWS_CHANNELS),
+        NoCallToAction(StringId.SID_BROWSE_ENTERTAINMENT_CHANNELS),
+        NoCallToAction(StringId.SID_BROWSE_SPORT_CHANNELS),
+        NoCallToAction(StringId.SID_BROWSE_CULTURE_CHANNELS),
+        NoCallToAction(StringId.SID_BROWSE_LOCAL_CHANNELS),
+    ]
+    MSG_STR_ID = StringId.SID_BROWSE_CHANNELS_PROMPT
+
+
+@step_collection.register
+class MyChannelsChatState(BasicChatState):
+    QREP_CTA = [
+        NoCallToAction(StringId.SID_CREATE_CHANNEL),
+        NoCallToAction(StringId.SID_EDIT_CHANNEL),
+        NoCallToAction(StringId.SID_LIST_MY_CHANNELS),
+    ]
+    MSG_STR_ID = StringId.SID_MY_CHANNELS_PROMPT
 
 
 class BotChat(object):
     MENU_CTA = [
-        CallToAction(StringId.SID_MENU_ANNOUNCEMENTS,
-                     'FirstAnnouncementsChatState'),
+        NoCallToAction(StringId.SID_MENU_ANNOUNCEMENTS),
         CallToAction(StringId.SID_MENU_CHANNELS,
-                     'FirstChannelsChatState'),
+                     'RootChannelsChatState'),
         CallToAction(StringId.SID_MENU_HELP,
-                     'FirstHelpChatState'),
+                     'RootHelpChatState'),
     ]
 
     @classmethod

@@ -43,24 +43,63 @@ class AutoNumber(Enum):
 
 class StringId(AutoNumber):
     SID_GREETING = ()
-    SID_SELECT_ACTION = ()
     SID_MENU_CHANNELS = ()
     SID_MENU_ANNOUNCEMENTS = ()
     SID_MENU_HELP = ()
-    SID_LIST_MY_CHANNELS = ()
+    SID_DBG_NO_ACTION = ()
+    SID_MY_CHANNELS = ()
     SID_SUBSCRIBE = ()
     SID_UNSUBSCRIBE = ()
+    SID_ROOT_PROMPT = ()
+    SID_BROWSE_CHANNELS = ()
+    SID_MAKE_ANNOUNCEMENT = ()
+    SID_BROWSE_CHANNELS_PROMPT = ()
+    SID_BROWSE_NEWS_CHANNELS = ()
+    SID_BROWSE_ENTERTAINMENT_CHANNELS = ()
+    SID_BROWSE_SPORT_CHANNELS = ()
+    SID_BROWSE_CULTURE_CHANNELS = ()
+    SID_BROWSE_LOCAL_CHANNELS = ()
+    SID_CREATE_CHANNEL = ()
+    SID_EDIT_CHANNEL = ()
+    SID_LIST_MY_CHANNELS = ()
+    SID_MY_CHANNELS_PROMPT = ()
+    SID_CHANNELS_HELP = ()
+    SID_CHANNELS_PROMPT = ()
+    SID_HELP_CHANNEL_DETAILS = ()
+    SID_HELP_CHANNEL_EXAMPLES = ()
+    SID_HELP_CHANNELS_PROMPT = ()
 
 
 DefaultStrings = dict(
     SID_GREETING='Hi {{user_first_name}}, welcome to Locano Chatbot',
-    SID_SELECT_ACTION='What do you want to do next?',
     SID_MENU_CHANNELS='Channels',
     SID_MENU_ANNOUNCEMENTS='Make an Announcement',
     SID_MENU_HELP='How To',
-    SID_LIST_MY_CHANNELS='List My Channels',
+    SID_DBG_NO_ACTION='[DBG] Not Implemented Yet',
+    SID_MY_CHANNELS='My Channels',
     SID_SUBSCRIBE='Subscribe',
     SID_UNSUBSCRIBE='Unsubscribe',
+    SID_ROOT_PROMPT=('Hi! Welcome to Locano Bot. '
+                     'We do information channels. You can create yours '
+                     'or subscribe to someones else\'s. Try these commands:'),
+    SID_BROWSE_CHANNELS='Browse Channels',
+    SID_MAKE_ANNOUNCEMENT='Make an Announcement',
+    SID_BROWSE_CHANNELS_PROMPT='Please choose a subject you are interested in',
+    SID_BROWSE_NEWS_CHANNELS='News',
+    SID_BROWSE_ENTERTAINMENT_CHANNELS='Entertainment',
+    SID_BROWSE_SPORT_CHANNELS='Sport',
+    SID_BROWSE_CULTURE_CHANNELS='Culture',
+    SID_BROWSE_LOCAL_CHANNELS='Local',
+    SID_CREATE_CHANNEL='Create Channel',
+    SID_EDIT_CHANNEL='Edit Channel',
+    SID_LIST_MY_CHANNELS='List My Channels',
+    SID_MY_CHANNELS_PROMPT='What do you want to do next?',
+    SID_CHANNELS_HELP='Channels Help',
+    SID_CHANNELS_PROMPT='What do you want to do next?',
+    SID_HELP_CHANNEL_DETAILS='More',
+    SID_HELP_CHANNEL_EXAMPLES='Examples',
+    SID_HELP_CHANNELS_PROMPT=('Channels are used to broadcast announcements. '
+                              'Announcements arrive to all the Channel Subscribers')
 )
 
 
