@@ -167,10 +167,10 @@ class FirstAnnouncementsChatState(BasicChatState):
 
 class BotChat(object):
     MENU_CTA = [
-        CallToAction(StringId.SID_MENU_CHANNELS,
-                     'FirstChannelsChatState'),
         CallToAction(StringId.SID_MENU_ANNOUNCEMENTS,
                      'FirstAnnouncementsChatState'),
+        CallToAction(StringId.SID_MENU_CHANNELS,
+                     'FirstChannelsChatState'),
         CallToAction(StringId.SID_MENU_HELP,
                      'FirstHelpChatState'),
     ]
