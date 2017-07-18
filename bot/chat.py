@@ -76,6 +76,7 @@ class NoCallToAction(CallToAction):
 
 class BasicChatState(ABC):
     QREP_CTA = []
+    MSG_STR_ID = None
 
     @classmethod
     def class_name(cls):
@@ -97,7 +98,8 @@ class BasicChatState(ABC):
         self.user = user
 
     def get_message(self):
-        return None, None
+        message = str(BotString(self.MSG_STR_ID)) if self.MSG_STR_ID else None
+        return message, None
 
     def show(self):
         message, metadata = self.get_message()
@@ -140,9 +142,7 @@ class RootChatState(BasicChatState):
         CallToAction(StringId.SID_MENU_HELP,
                      'FirstHelpChatState'),
     ]
-
-    def get_message(self):
-        return str(BotString(StringId.SID_SELECT_ACTION)), None
+    MSG_STR_ID = StringId.SID_SELECT_ACTION
 
 
 @step_collection.register
@@ -157,9 +157,7 @@ class FirstChannelsChatState(BasicChatState):
         NoCallToAction(StringId.SID_SUBSCRIBE),
         NoCallToAction(StringId.SID_UNSUBSCRIBE)
     ]
-
-    def get_message(self):
-        return str(BotString(StringId.SID_SELECT_ACTION)), None
+    MSG_STR_ID = StringId.SID_SELECT_ACTION
 
 
 @step_collection.register
