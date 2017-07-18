@@ -83,6 +83,8 @@ class BasicChatState(ABC):
         return cls.__name__
 
     def _prepare_qreps(self):
+        if not self.QREP_CTA:
+            return None
         qreps = []
         for cta in self.QREP_CTA:
             p = Payload('ClbQRep', self.class_name(), cta.action_id)
