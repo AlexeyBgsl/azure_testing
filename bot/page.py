@@ -14,28 +14,6 @@ from bot.translations import StringId, BotString
 START_PAYLOAD = "LOCANOBOT_START"
 
 
-def safe_event_seq(f):
-    @functools.wraps(f)
-    def wrapped(self, *args, **kwargs):
-        for obj in args:
-            if isinstance(obj, fbmq.Event):
-                user = self.create_or_update_user(obj.sender_id)
-                if user:
-                    if not obj.message_seq or user.fbmsgseq < obj.message_seq:
-                        result = f(self, user, *args, **kwargs)
-                        if obj.message_seq:
-                            user.fbmsgseq=obj.message_seq
-                        user.save()
-                        return result
-                    else:
-                        logging.error("[U#%s] incorrect event seq: %s > %d",
-                                      obj.sender_id, user.fbmsgseq, obj.message_seq)
-                else:
-                    logging.error("[U#%s] cannot get user object", obj.sender_id)
-
-    return wrapped
-
-
 DUMP_ALL = False
 
 primitive = (int, str, bool)
@@ -82,33 +60,51 @@ class BotPage(fbmq.Page):
         user.fbid = fbid
         return user
 
+    def _check_message_seq(self, user, event):
+        message_seq = event.message_seq
+        if message_seq and user.fbmsgseq >= message_seq:
+            logging.warning("[U#%s] incorrect event seq: %s >= %d",
+                            user.fbid, user.fbmsgseq, message_seq)
+            return False
+
+        user.fbmsgseq = message_seq
+        user.save()
+        return True
+
     def create_or_update_user(self, fbid):
         user = self.users.by_fbid(fbid)
         if user is None:
             user = self._user_from_fb_profile(fbid)
         return user
 
-    @safe_event_seq
     @dump_member_func
-    def on_start(self, user, event):
+    def on_start(self, event):
+        user = self.create_or_update_user(event.sender_id)
         return BotChat(self, user).start(event)
 
-    @safe_event_seq
     @dump_member_func
-    def on_chat_menu(self, user, page, payload, event):
+    def on_chat_menu(self, page, payload, event):
+        user = self.create_or_update_user(event.sender_id)
         return chat_menu_handler(user, page, payload, event)
 
-    @safe_event_seq
     @dump_member_func
-    def on_chat_callback(self, user, page, payload, event):
+    def on_chat_callback(self, page, payload, event):
+        user = self.create_or_update_user(event.sender_id)
         return chat_clb_handler(user, page, payload, event)
 
-    @safe_event_seq
     @dump_member_func
-    def on_message(self, user, event):
+    def on_message(self, event):
         sender_id = event.sender_id
-        if event.is_quick_reply:
-            logging.debug("[U#%s] [on_message] ignored as a quick reply", sender_id)
+        user = self.create_or_update_user(sender_id)
+        if not user:
+            logging.error("[U#%s] [on_message] cannot get user",
+                          sender_id)
+        elif not self._check_message_seq(user, event):
+            logging.debug("[U#%s] [on_message] ignored due to incorrect seq",
+                          sender_id)
+        elif event.is_quick_reply:
+            logging.debug("[U#%s] [on_message] ignored as a quick reply",
+                          sender_id)
         elif event.is_text_message:
             message = event.message_text
             logging.debug("[U#%s] [on_message] %s", sender_id, message)
