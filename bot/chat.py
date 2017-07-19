@@ -3,10 +3,6 @@ from abc import ABC, abstractmethod
 from fbmq import QuickReply, Template
 from bot.translations import BotString
 
-CHAT_CLB_ID = 'CHAT_CLB'
-CHAT_MENU_ID = 'CHAT_MENU'
-START_ACTION = 'Start'
-
 
 BotChatClbTypes = dict(
     ClbQRep="CHAT_CLB_QREP",
