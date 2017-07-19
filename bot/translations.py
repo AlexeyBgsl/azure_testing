@@ -1,73 +1,12 @@
-from enum import Enum, unique
 from bot.db_datastore import BasicEntry, BasicTable
 
 
-class AutoNumber(Enum):
-    def __new__(cls):
-        value = len(cls.__members__) + 1
-        obj = object.__new__(cls)
-        obj._value_ = value
-        return obj
-
-    @classmethod
-    def from_sid_name(cls, sid_name):
-        try:
-            return cls[sid_name]
-        except KeyError:
-            return None
-
-    @classmethod
-    def is_valid(cls, sid):
-        if isinstance(sid, cls):
-            return True
-        if isinstance(sid, str):
-            return True if cls.from_sid_name(sid) else False
-        return False
-
-    @classmethod
-    def check_default_strings(cls):
-        for sid in cls:
-            if sid.name not in DefaultStrings:
-                raise ValueError(
-                    '{} must be in DefaultStrings'.format(sid.name))
-
-
-    @classmethod
-    def default_strings_to_db(cls, override=False):
-        for sid in cls:
-            s = String(sid)
-            if not s.in_db or override:
-                s.set(String.DEFAULT_LOCALE, DefaultStrings[sid.name])
-                s.save()
-
-
-class StringId(AutoNumber):
-    SID_GREETING = ()
-    SID_MENU_CHANNELS = ()
-    SID_MENU_ANNOUNCEMENTS = ()
-    SID_MENU_HELP = ()
-    SID_DBG_NO_ACTION = ()
-    SID_MY_CHANNELS = ()
-    SID_SUBSCRIBE = ()
-    SID_UNSUBSCRIBE = ()
-    SID_ROOT_PROMPT = ()
-    SID_BROWSE_CHANNELS = ()
-    SID_MAKE_ANNOUNCEMENT = ()
-    SID_BROWSE_CHANNELS_PROMPT = ()
-    SID_BROWSE_NEWS_CHANNELS = ()
-    SID_BROWSE_ENTERTAINMENT_CHANNELS = ()
-    SID_BROWSE_SPORT_CHANNELS = ()
-    SID_BROWSE_CULTURE_CHANNELS = ()
-    SID_BROWSE_LOCAL_CHANNELS = ()
-    SID_CREATE_CHANNEL = ()
-    SID_EDIT_CHANNEL = ()
-    SID_LIST_MY_CHANNELS = ()
-    SID_MY_CHANNELS_PROMPT = ()
-    SID_CHANNELS_HELP = ()
-    SID_CHANNELS_PROMPT = ()
-    SID_HELP_CHANNEL_DETAILS = ()
-    SID_HELP_CHANNEL_EXAMPLES = ()
-    SID_HELP_CHANNELS_PROMPT = ()
+def default_strings_to_db(override=False):
+    for sid in DefaultStrings:
+        s = String(sid)
+        if not s.in_db or override:
+            s.set(String.DEFAULT_LOCALE, DefaultStrings[sid])
+            s.save()
 
 
 DefaultStrings = dict(
@@ -141,6 +80,10 @@ class String(BasicEntry):
             l.append(s)
         return l
 
+    @classmethod
+    def all_defaults(cls):
+        return list(DefaultStrings.keys())
+
     def __init__(self, sid=None):
         super().__init__(self.table)
         self.add_db_field('sid', '')
@@ -151,13 +94,16 @@ class String(BasicEntry):
     def in_db(self):
         return self.oid is not None
 
+    @property
+    def has_def(self):
+        return self.sid in DefaultStrings
+
     def load(self, sid):
-        ssid = sid.name if isinstance(sid, StringId) else sid
-        e = self.table.by_sid(ssid)
+        e = self.table.by_sid(sid)
         if e:
             self.from_entity(e)
             return True
-        self.sid = ssid
+        self.sid = sid
         return False
 
     def set(self, locale, text):

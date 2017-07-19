@@ -1,25 +1,52 @@
 import argparse
-from bot import String, StringId
+import glob
+import os
+from bot import String, default_strings_to_db
 
 
-def normalized_sid_name(sid_name):
-    if StringId.from_sid_name(sid_name):
-        return sid_name
-    return '*' + sid_name
+def print_string(s, verbose=False):
+    print('{sid} {db}DB {df}DEF'.format(sid=s.sid,
+                                        db = '' if s.in_db else '!',
+                                        df='' if s.has_def else '!'))
+    if verbose:
+        locales = s.list()
+        for l in locales:
+            print('    {} {}'.format(l, s.get(l)))
 
 
-def print_string(s):
-    print('{sid} {oid:015d}'.format(sid=normalized_sid_name(s.sid), oid=s.oid))
-    locales = s.list()
-    for l in locales:
-        print('    {} {}'.format(l, s.get(l)))
+def get_identifier(s):
+    identifier = ''
+    for c in s:
+        i = identifier + c
+        if i.isidentifier():
+            identifier = i
+        else:
+            break
+    return identifier
 
 
-def int_val(s):
-    try:
-        return int(s)
-    except ValueError:
-        return None
+def sids_by_code():
+    path = os.path.dirname(os.path.abspath(__file__))
+    files = [file for file in glob.glob(path + '/bot/**/*.py',
+                                        recursive=True)]
+    sids = []
+    for fname in files:
+        with open(fname) as f:
+            lines = f.readlines()
+            for l in lines:
+                b = l.find('SID_')
+                if b != -1:
+                    sid = get_identifier(l[b:])
+                    if sid not in sids:
+                        sids.append(sid)
+    return sids
+
+
+def check_code(verbose):
+    sids = sids_by_code()
+    for sid in sids:
+        s = String(sid)
+        print_string(s, verbose=verbose)
 
 
 parser = argparse.ArgumentParser()
@@ -29,44 +56,46 @@ parser.add_argument("command", help="command to execute",
 parser.add_argument("-s", "--sid", help="String ID")
 parser.add_argument("-l", "--lang", help="language")
 parser.add_argument("-t", "--text", help="text")
+parser.add_argument("-v", "--verbose", help="increase output verbosity",
+                    action="store_true")
+parser.add_argument("-f", "--force", help="force string overriding",
+                    action="store_true")
 
 args = parser.parse_args()
+
+verbose = args.verbose if args.verbose else False
 
 if args.command == 'list_db':
     results = String.all()
     print('Following strings are in table:')
     for s in results:
-        print_string(s)
+        print_string(s, verbose=verbose)
 elif args.command == 'list_ids':
     print('Following String IDs exist:')
-    for sid in StringId:
+    for sid in String.all_defaults():
         s = String(sid)
-        print_string(s)
+        print_string(s, verbose=verbose)
 elif args.command == 'check':
-    StringId.check_default_strings()
+    check_code(verbose)
 elif args.command == 'fill':
-    StringId.default_strings_to_db()
+    default_strings_to_db(override=True if args.force else False)
 else:
     if not args.sid:
         raise ValueError("Please specify String ID")
 
-    if not StringId.is_valid(args.sid):
-        raise ValueError(
-            "Invalid String ID {}".format(args.sid))
+    s = String(args.sid)
 
     if args.command == 'show':
         s = String(args.sid)
-        print_string(s)
+        print_string(s, verbose=verbose)
     elif args.command == 'set':
         if not args.lang:
             raise ValueError("Please specify Language")
         if not args.text:
             raise ValueError("Please specify Text")
-        s = String(args.sid)
         s.set(args.lang, args.text)
         s.save()
     elif args.command == 'remove':
-        s = String(args.sid)
         s.delete()
     else:
         raise ValueError("Unknown command")

@@ -9,7 +9,7 @@ from bot.chat import (
     chat_menu_handler,
     BotChat
 )
-from bot.translations import StringId, BotString
+from bot.translations import BotString
 
 START_PAYLOAD = "LOCANOBOT_START"
 
@@ -51,7 +51,7 @@ class BotPage(fbmq.Page):
     def __init__(self):
         self.users = Users()
         super().__init__(CONFIG['ACCESS_TOKEN'])
-        self.greeting(str(BotString(StringId.SID_GREETING)))
+        self.greeting(str(BotString('SID_GREETING')))
         self.show_starting_button(START_PAYLOAD)
         self.show_persistent_menu(BotChat.get_menu_buttons())
 
