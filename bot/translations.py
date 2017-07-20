@@ -38,7 +38,8 @@ DefaultStrings = dict(
     SID_HELP_CHANNEL_DETAILS='More',
     SID_HELP_CHANNEL_EXAMPLES='Examples',
     SID_HELP_CHANNELS_PROMPT=('Channels are used to broadcast announcements. '
-                              'Announcements arrive to all the Channel Subscribers')
+                              'Announcements arrive to all the Channel Subscribers'),
+    SID_GET_CHANNEL_NAME='Enter desired channel name',
 )
 
 

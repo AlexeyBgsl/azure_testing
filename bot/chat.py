@@ -6,7 +6,8 @@ from bot.translations import BotString
 
 BotChatClbTypes = dict(
     ClbQRep="CHAT_CLB_QREP",
-    ClbMenu="CHAT_CLB_MENU"
+    ClbMenu="CHAT_CLB_MENU",
+    ClbMsg="CHAT_CLB_MSG"
 )
 
 
@@ -91,6 +92,10 @@ class BasicChatState(ABC):
         qreps = self._prepare_qreps()
         self.page.send(fbid, message, quick_replies=qreps, metadata=metadata)
 
+    def _register_for_user_input(self, action_id):
+        p = Payload('ClbMsg', self.class_name(), action_id)
+        self.page.register_for_message(self.user, str(p))
+
     def __init__(self, page, user):
         self.page = page
         self.user = user
@@ -104,26 +109,24 @@ class BasicChatState(ABC):
         if message:
             self._send(self.user.fbid, message, metadata)
 
-    def on_action_done(self, cta, event):
-        pass
+    def on_user_input(self, action_id, event):
+        return None
 
     def on_action(self, type, action_id, event):
         logging.debug("%s: on_action(%s): %s arrived",
                       self.class_name(), type, action_id)
         if type == 'ClbQRep':
-            ctas = self.QREP_CTA
-        else:
-            logging.warning("%s: on_action(%s): unknown type",
-                            self.class_name(), type)
-            ctas = None
-
-        if ctas:
-            for cta in ctas:
+            for cta in self.QREP_CTA:
                 if cta.action_id == action_id:
-                    self.on_action_done(cta, event)
                     logging.debug("%s: next CTA: %s",
                                   self.class_name(), cta.class_name)
                     return cta.class_name
+        elif type == 'ClbMsg':
+            return self.on_user_input(action_id, event)
+        else:
+            logging.warning("%s: on_action(%s): unknown type",
+                            self.class_name(), type)
+
         return None
 
 
@@ -179,11 +182,30 @@ class BrowseChannelsChatState(BasicChatState):
 @step_collection.register
 class MyChannelsChatState(BasicChatState):
     QREP_CTA = [
-        NoCallToAction('SID_CREATE_CHANNEL'),
+        CallToAction('SID_CREATE_CHANNEL', 'CreateChannelsChatState'),
         NoCallToAction('SID_EDIT_CHANNEL'),
         NoCallToAction('SID_LIST_MY_CHANNELS'),
     ]
     MSG_STR_ID = 'SID_MY_CHANNELS_PROMPT'
+
+
+@step_collection.register
+class CreateChannelsChatState(BasicChatState):
+    MSG_STR_ID = 'SID_GET_CHANNEL_NAME'
+
+    def show(self):
+        message, metadata = self.get_message()
+        if message:
+            self._register_for_user_input('SID_GET_CHANNEL_NAME')
+            self._send(self.user.fbid, message, metadata)
+
+    def on_user_input(self, action_id, event):
+        logging.debug("[U#%s] on_user_input arrived: %s",
+                      event.sender_id, action_id)
+        if action_id == 'SID_GET_CHANNEL_NAME':
+            logging.debug("[U#%s] Desired channel name is: %s",
+                          event.sender_id, event.message_text)
+        return None
 
 
 class BotChat(object):
@@ -257,4 +279,9 @@ def chat_clb_handler(user, page, payload, event):
 
 def chat_menu_handler(user, page, payload, event):
     logging.debug("[U#%s] Menu Handler: %s", event.sender_id, payload)
+    BotChat.clb_by_payload(user, page, payload, event)
+
+
+def chat_msg_handler(user, page, payload, event):
+    logging.debug("[U#%s] Msg Handler: %s", event.sender_id, payload)
     BotChat.clb_by_payload(user, page, payload, event)

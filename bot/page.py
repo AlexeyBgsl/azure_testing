@@ -2,11 +2,12 @@ import logging
 import fbmq
 import functools
 from bot.config import CONFIG
-from bot.db_datastore import Users, User
+from bot.db_datastore import Users, User, BasicTable, BasicEntry
 from bot.chat import (
     BotChatClbTypes,
     chat_clb_handler,
     chat_menu_handler,
+    chat_msg_handler,
     BotChat
 )
 from bot.translations import BotString
@@ -47,6 +48,47 @@ def null_decorator(f):
 dump_member_func = dump_mfunc if DUMP_ALL else null_decorator
 
 
+class MsgHandlers(BasicTable):
+    def __init__(self):
+        super().__init__(kind="Handlers")
+
+    def by_fbid(self, fbid):
+        results = self.simple_query(fbid=fbid)
+        if len(results) > 1:
+            raise ValueError("FB ID must be unique")
+        return results[0] if results else None
+
+
+class MsgHandler(BasicEntry):
+    table = MsgHandlers()
+
+    @classmethod
+    def get_by_fbid(cls, fbid, auto_remove=True):
+        e = cls.table.by_fbid(fbid)
+        if e:
+            cls.table.delete(e.key.id)
+            return cls(entity=e)
+        return None
+
+    @classmethod
+    def create_or_update(cls, fbid, payload, auto_save=True):
+        e = cls.table.by_fbid(fbid)
+        h = cls(entity=e)
+        h.set(fbid=fbid, payload=payload)
+        if auto_save:
+            h.save()
+        return h
+
+    def __init__(self, entity=None):
+        super().__init__(self.table)
+        if entity:
+            self.from_entity(entity)
+
+    def set(self, fbid, payload):
+        self.add_db_field('fbid', fbid)
+        self.add_db_field('payload', payload)
+
+
 class BotPage(fbmq.Page):
     def __init__(self):
         self.users = Users()
@@ -77,6 +119,9 @@ class BotPage(fbmq.Page):
             user = self._user_from_fb_profile(fbid)
         return user
 
+    def register_for_message(self, user, payload):
+        MsgHandler.create_or_update(user.fbid, payload)
+
     @dump_member_func
     def on_start(self, event):
         user = self.create_or_update_user(event.sender_id)
@@ -105,12 +150,16 @@ class BotPage(fbmq.Page):
         elif event.is_quick_reply:
             logging.debug("[U#%s] [on_message] ignored as a quick reply",
                           sender_id)
-        elif event.is_text_message:
-            message = event.message_text
-            logging.debug("[U#%s] [on_message] %s", sender_id, message)
-            self.send(sender_id, "thank you! your message is '%s'" % message)
         else:
-            self.send(sender_id, "thank you! your message received")
+            h = MsgHandler.get_by_fbid(sender_id)
+            if h:
+                chat_msg_handler(user, page, h.payload, event)
+            elif event.is_text_message:
+                message = event.message_text
+                logging.debug("[U#%s] [on_message] %s", sender_id, message)
+                self.send(sender_id, "thank you! your message is '%s'" % message)
+            else:
+                self.send(sender_id, "thank you! your message received")
 
     @dump_member_func
     def on_echo(self, event):
