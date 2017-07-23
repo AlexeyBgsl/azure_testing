@@ -66,7 +66,8 @@ class MsgHandler(BasicEntry):
     def get_by_fbid(cls, fbid, auto_remove=True):
         e = cls.table.by_fbid(fbid)
         if e:
-            cls.table.delete(e.key.id)
+            if auto_remove:
+                cls.table.delete(e.key.id)
             return cls(entity=e)
         return None
 
