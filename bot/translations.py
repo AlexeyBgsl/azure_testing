@@ -37,9 +37,13 @@ DefaultStrings = dict(
     SID_CHANNELS_PROMPT='What do you want to do next?',
     SID_HELP_CHANNEL_DETAILS='More',
     SID_HELP_CHANNEL_EXAMPLES='Examples',
-    SID_HELP_CHANNELS_PROMPT=('Channels are used to broadcast announcements. '
+    SID_HELP_CHANNELS_PROMPT=('Channels are used to broadcast announcements.\n'
                               'Announcements arrive to all the Channel Subscribers'),
     SID_GET_CHANNEL_NAME='Enter desired channel name',
+    SID_GET_CHANNEL_DESC=('Channel {channel_name} created.\n'
+                          'Channel ID is {channel_id}.\n'
+                          'Enter channel description'),
+    SID_CHANNEL_CREATED='Channel {channel_name} ({channel_id}) is ready to use',
 )
 
 

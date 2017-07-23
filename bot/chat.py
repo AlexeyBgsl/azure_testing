@@ -1,7 +1,8 @@
 import logging
-from abc import ABC, abstractmethod
+from abc import ABC
 from fbmq import QuickReply, Template
 from bot.translations import BotString
+from bot.db_datastore import Channel
 
 
 BotChatClbTypes = dict(
@@ -199,12 +200,39 @@ class CreateChannelsChatState(BasicChatState):
             self._register_for_user_input('SID_GET_CHANNEL_NAME')
             self._send(self.user.fbid, message, metadata)
 
+    def create_channel(self, name):
+        c = Channel()
+        c.name = name
+        c.owner_uid = self.user.oid
+        c.save()
+        return c
+
     def on_user_input(self, action_id, event):
         logging.debug("[U#%s] on_user_input arrived: %s",
                       event.sender_id, action_id)
         if action_id == 'SID_GET_CHANNEL_NAME':
-            logging.debug("[U#%s] Desired channel name is: %s",
-                          event.sender_id, event.message_text)
+            if event.is_text_message:
+                logging.debug("[U#%s] Desired channel name is: %s",
+                              event.sender_id, event.message_text)
+                c = self.create_channel(event.message_text)
+                self._register_for_user_input(str(c.chid))
+                s = str(BotString('SID_GET_CHANNEL_DESC'))
+                self._send(self.user.fbid, s.format(channel_name=c.name,
+                                                    channel_id=c.str_chid))
+            else:
+                self.show()
+        else:
+            if event.is_text_message:
+                c = Channel.by_chid(action_id)
+                logging.debug("[U#%s] Desired %s channel desc is: %s",
+                              event.sender_id, c.str_chid, event.message_text)
+                c.desc = event.message_text
+                c.save()
+                s = str(BotString('SID_CHANNEL_CREATED'))
+                self._send(self.user.fbid, s.format(channel_name=c.name,
+                                                    channel_id=c.str_chid))
+                return 'IdleChatState'
+
         return None
 
 

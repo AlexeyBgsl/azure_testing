@@ -107,3 +107,38 @@ class Users(BasicTable):
         return User(self, entity=results[0]) if results else None
 
 
+class Channels(BasicTable):
+    def __init__(self):
+        super().__init__(kind="Channels", exclude_from_indexes=('desc',))
+
+    def by_chid(self, chid):
+        return self.simple_query(chid=chid)
+
+
+class Channel(BasicEntry):
+    table = Channels()
+
+    @classmethod
+    def by_chid(cls, chid):
+        e = cls.table.read(chid)
+        if e:
+            return cls(e) if e else None
+
+    def __init__(self, entity=None):
+        super().__init__(self.table)
+        self.add_db_field('owner_uid')
+        self.add_db_field('name')
+        self.add_db_field('desc', '')
+        if entity:
+            self.from_entity(entity)
+
+    @property
+    def chid(self):
+        return self.oid
+
+    @property
+    def str_chid(self):
+        s = str(self.oid).ljust(16, '0')
+        return '{}-{}-{}-{}'.format(s[:4], s[4:8], s[8:12], s[12:16])
+
+
