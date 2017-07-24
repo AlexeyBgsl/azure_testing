@@ -88,8 +88,9 @@ class BasicChatState(ABC):
             qreps.append(QuickReply(cta.title(self.user), str(p)))
         return qreps
 
-    def _send(self, message):
-        qreps = self._prepare_qreps()
+    def send(self, sid, channel=None, with_qreps=False):
+        qreps = self._prepare_qreps() if with_qreps else None
+        message = self.get_message(sid, channel=channel)
         self.page.send(self.user.fbid, message, quick_replies=qreps)
 
     def _register_for_user_input(self, action_id):
@@ -100,15 +101,12 @@ class BasicChatState(ABC):
         self.page = page
         self.user = user
 
-    def get_message(self):
-        if self.MSG_STR_ID:
-            return str(BotString(self.MSG_STR_ID, user=self.user))
-        return None
+    def get_message(self, sid=MSG_STR_ID, channel=None):
+        return str(BotString(sid, user=self.user, channel=channel))
 
     def show(self):
-        message = self.get_message()
-        if message:
-            self._send(message)
+        if self.MSG_STR_ID:
+            self.send(self.MSG_STR_ID, with_qreps=True)
 
     def on_user_input(self, action_id, event):
         return None
@@ -195,15 +193,12 @@ class CreateChannelsChatState(BasicChatState):
     MSG_STR_ID = 'SID_GET_CHANNEL_NAME'
 
     def show(self):
-        message = self.get_message()
-        if message:
-            self._register_for_user_input('SID_GET_CHANNEL_NAME')
-            self._send(message)
+        assert self.MSG_STR_ID
+        self._register_for_user_input('SID_GET_CHANNEL_NAME')
+        super().show()
 
     def create_channel(self, name):
-        c = Channel()
-        c.name = name
-        c.owner_uid = self.user.oid
+        c = Channel(name=name, owner_uid=self.user.oid)
         c.save()
         return c
 
@@ -216,9 +211,7 @@ class CreateChannelsChatState(BasicChatState):
                               event.sender_id, event.message_text)
                 c = self.create_channel(event.message_text)
                 self._register_for_user_input(str(c.chid))
-                self._send(str(BotString('SID_GET_CHANNEL_DESC',
-                                         user=self.user,
-                                         channel=c)))
+                self.send('SID_GET_CHANNEL_DESC', channel=c)
             else:
                 self.show()
         else:
@@ -228,9 +221,7 @@ class CreateChannelsChatState(BasicChatState):
                               event.sender_id, c.str_chid, event.message_text)
                 c.desc = event.message_text
                 c.save()
-                self._send(str(BotString('SID_CHANNEL_CREATED',
-                                         user=self.user,
-                                         channel=c)))
+                self.send('SID_CHANNEL_CREATED', channel=c)
                 return 'IdleChatState'
 
         return None

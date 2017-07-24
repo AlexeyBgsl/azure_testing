@@ -122,12 +122,12 @@ class Channel(BasicEntry):
     def by_chid(cls, chid):
         e = cls.table.read(chid)
         if e:
-            return cls(e) if e else None
+            return cls(entity=e) if e else None
 
-    def __init__(self, entity=None):
+    def __init__(self, name=None, owner_uid=None, entity=None):
         super().__init__(self.table)
-        self.add_db_field('owner_uid')
-        self.add_db_field('name')
+        self.add_db_field('owner_uid', owner_uid)
+        self.add_db_field('name', name)
         self.add_db_field('desc', '')
         if entity:
             self.from_entity(entity)
