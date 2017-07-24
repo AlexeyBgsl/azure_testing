@@ -60,9 +60,8 @@ class CallToAction(object):
         self.class_name = class_name
         self.action_id = action_id if action_id else class_name
 
-    @property
-    def title(self):
-        return str(BotString(self.title_sid))
+    def title(self, user=None):
+        return str(BotString(self.title_sid, user=user))
 
 
 class NoCallToAction(CallToAction):
@@ -86,7 +85,7 @@ class BasicChatState(ABC):
         qreps = []
         for cta in self.QREP_CTA:
             p = Payload('ClbQRep', self.class_name(), cta.action_id)
-            qreps.append(QuickReply(cta.title, str(p)))
+            qreps.append(QuickReply(cta.title(self.user), str(p)))
         return qreps
 
     def _send(self, fbid, message, metadata = None):
@@ -102,7 +101,9 @@ class BasicChatState(ABC):
         self.user = user
 
     def get_message(self):
-        message = str(BotString(self.MSG_STR_ID)) if self.MSG_STR_ID else None
+        message = None
+        if self.MSG_STR_ID:
+            message = str(BotString(self.MSG_STR_ID, user=self.user))
         return message, None
 
     def show(self):
@@ -216,9 +217,10 @@ class CreateChannelsChatState(BasicChatState):
                               event.sender_id, event.message_text)
                 c = self.create_channel(event.message_text)
                 self._register_for_user_input(str(c.chid))
-                s = str(BotString('SID_GET_CHANNEL_DESC'))
-                self._send(self.user.fbid, s.format(channel_name=c.name,
-                                                    channel_id=c.str_chid))
+                self._send(self.user.fbid,
+                           str(BotString('SID_GET_CHANNEL_DESC',
+                                         user=self.user,
+                                         channel=c)))
             else:
                 self.show()
         else:
@@ -228,9 +230,10 @@ class CreateChannelsChatState(BasicChatState):
                               event.sender_id, c.str_chid, event.message_text)
                 c.desc = event.message_text
                 c.save()
-                s = str(BotString('SID_CHANNEL_CREATED'))
-                self._send(self.user.fbid, s.format(channel_name=c.name,
-                                                    channel_id=c.str_chid))
+                self._send(self.user.fbid,
+                           str(BotString('SID_CHANNEL_CREATED',
+                                         user=self.user,
+                                         channel=c)))
                 return 'IdleChatState'
 
         return None
@@ -265,7 +268,7 @@ class BotChat(object):
         buttons = []
         for cta in cls.MENU_CTA:
             p = Payload('ClbMenu', cls.class_name(), cta.action_id)
-            buttons.append(Template.ButtonPostBack(cta.title, str(p)))
+            buttons.append(Template.ButtonPostBack(cta.title(), str(p)))
         return buttons
 
     def _on_menu(self, action_id, event):

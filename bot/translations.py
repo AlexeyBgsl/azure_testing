@@ -1,4 +1,5 @@
 from bot.db_datastore import BasicEntry, BasicTable
+from string import Template
 
 
 def default_strings_to_db(override=False):
@@ -40,10 +41,10 @@ DefaultStrings = dict(
     SID_HELP_CHANNELS_PROMPT=('Channels are used to broadcast announcements.\n'
                               'Announcements arrive to all the Channel Subscribers'),
     SID_GET_CHANNEL_NAME='Enter desired channel name',
-    SID_GET_CHANNEL_DESC=('Channel {channel_name} created.\n'
-                          'Channel ID is {channel_id}.\n'
+    SID_GET_CHANNEL_DESC=('Channel $CHANNEL_NAME created.\n'
+                          'Channel ID is $CHANNEL_ID.\n'
                           'Enter channel description'),
-    SID_CHANNEL_CREATED='Channel {channel_name} ({channel_id}) is ready to use',
+    SID_CHANNEL_CREATED='Channel $CHANNEL_NAME ($CHANNEL_ID) is ready to use',
 )
 
 
@@ -143,13 +144,23 @@ class String(BasicEntry):
 
 
 class BotString(String):
-    def __init__(self, sid, locale=None):
+    SUB_USER_FIRST_NAME='USER_FIRST_NAME'
+    SUB_USER_LAST_NAME='USER_LAST_NAME'
+    SUB_CHANNEL_NAME='CHANNEL_NAME'
+    SUB_CHANNEL_ID='CHANNEL_ID'
+
+    def __init__(self, sid, locale=None, user=None, channel=None):
         super().__init__(sid)
         self.locale = locale
-
-    @property
-    def string(self):
-        return self.get_safe(self.locale)
+        self.user = user
+        self.channel = channel
 
     def __str__(self):
-        return self.get_safe(self.locale)
+        d = {}
+        if self.user:
+            d[self.SUB_USER_FIRST_NAME] = self.user.first_name
+            d[self.SUB_USER_LAST_NAME] = self.user.last_name
+        if self.channel:
+            d[self.SUB_CHANNEL_NAME] = self.channel.name
+            d[self.SUB_CHANNEL_ID] = self.channel.str_chid
+        return Template(self.get_safe(self.locale)).safe_substitute(d)
