@@ -71,6 +71,12 @@ class NoCallToAction(CallToAction):
         super().__init__(title_sid, self.CLS_NAME)
 
 
+class HandlerResult():
+    def __init__(self, next_cls_name, extra_args=None):
+        self.next_cls_name = next_cls_name
+        self.extra_args = extra_args if extra_args else {}
+
+
 class BasicChatState(ABC):
     QREP_CTA = []
     MSG_STR_ID = None
@@ -116,7 +122,7 @@ class BasicChatState(ABC):
             if cta.action_id == action_id:
                 logging.debug("%s: next CTA: %s",
                               self.class_name(), cta.class_name)
-                return cta.class_name
+                return HandlerResult(cta.class_name)
         return None
 
     def on_action(self, type, action_id, event):
@@ -268,17 +274,21 @@ class BotChat(object):
             if cta.action_id == action_id:
                 logging.debug("%s: next CTA: %s",
                               self.class_name(), cta.class_name)
-                return cta.class_name
+                return HandlerResult(cta.class_name)
+        return None
 
     def __init__(self, page, user, scls_name=None):
         self.page = page
         self.user = user
-        self.instantiate_state(scls_name if scls_name else 'RootChatState')
+        if not scls_name:
+            scls_name = 'RootChatState'
+        self.instantiate_state(HandlerResult(scls_name))
 
-    def instantiate_state(self, class_name):
-        self.state = step_collection.instantiate(class_name,
+    def instantiate_state(self, result):
+        self.state = step_collection.instantiate(result.next_cls_name,
                                                  self.page,
-                                                 self.user)
+                                                 self.user,
+                                                 **result.extra_args)
 
     def start(self, event):
         self.state.show()
@@ -287,11 +297,11 @@ class BotChat(object):
         logging.debug("%s: on_action(%s): %s arrived",
                       self.class_name(), type, action_id)
         if type == 'ClbMenu':
-            next_state = self._on_menu(action_id, event)
+            result = self._on_menu(action_id, event)
         else:
-            next_state = self.state.on_action(type, action_id, event)
-        if next_state:
-            self.instantiate_state(next_state)
+            result = self.state.on_action(type, action_id, event)
+        if result:
+            self.instantiate_state(result)
             self.state.show()
 
 
