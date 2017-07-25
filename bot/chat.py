@@ -111,15 +111,19 @@ class BasicChatState(ABC):
     def on_user_input(self, action_id, event):
         return None
 
+    def on_quick_response(self, action_id, event):
+        for cta in self.QREP_CTA:
+            if cta.action_id == action_id:
+                logging.debug("%s: next CTA: %s",
+                              self.class_name(), cta.class_name)
+                return cta.class_name
+        return None
+
     def on_action(self, type, action_id, event):
         logging.debug("%s: on_action(%s): %s arrived",
                       self.class_name(), type, action_id)
         if type == 'ClbQRep':
-            for cta in self.QREP_CTA:
-                if cta.action_id == action_id:
-                    logging.debug("%s: next CTA: %s",
-                                  self.class_name(), cta.class_name)
-                    return cta.class_name
+            return self.on_quick_response(action_id, event)
         elif type == 'ClbMsg':
             return self.on_user_input(action_id, event)
         else:
