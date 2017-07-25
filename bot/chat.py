@@ -72,9 +72,9 @@ class NoCallToAction(CallToAction):
 
 
 class HandlerResult():
-    def __init__(self, next_cls_name, extra_args=None):
+    def __init__(self, next_cls_name, **kwargs):
         self.next_cls_name = next_cls_name
-        self.extra_args = extra_args if extra_args else {}
+        self.extra_args = kwargs
 
 
 class BasicChatState(ABC):
@@ -103,16 +103,17 @@ class BasicChatState(ABC):
         p = Payload('ClbMsg', self.class_name(), action_id)
         self.page.register_for_message(self.user, str(p))
 
-    def __init__(self, page, user):
+    def __init__(self, page, user, **kwargs):
         self.page = page
         self.user = user
+        self.extra_params = kwargs
 
     def get_message(self, sid=MSG_STR_ID, channel=None):
         return str(BotString(sid, user=self.user, channel=channel))
 
-    def show(self):
+    def show(self, channel=None):
         if self.MSG_STR_ID:
-            self.send(self.MSG_STR_ID, with_qreps=True)
+            self.send(self.MSG_STR_ID, channel=channel, with_qreps=True)
 
     def on_user_input(self, action_id, event):
         return None
@@ -215,26 +216,50 @@ class CreateChannelsChatState(BasicChatState):
     def on_user_input(self, action_id, event):
         logging.debug("[U#%s] on_user_input arrived: %s",
                       event.sender_id, action_id)
-        if action_id == 'SID_GET_CHANNEL_NAME':
-            if event.is_text_message:
-                logging.debug("[U#%s] Desired channel name is: %s",
-                              event.sender_id, event.message_text)
-                c = self.create_channel(event.message_text)
-                self._register_for_user_input(str(c.chid))
-                self.send('SID_GET_CHANNEL_DESC', channel=c)
-            else:
-                self.show()
-        else:
-            if event.is_text_message:
-                c = Channel.by_chid(action_id)
-                logging.debug("[U#%s] Desired %s channel desc is: %s",
-                              event.sender_id, c.str_chid, event.message_text)
-                c.desc = event.message_text
-                c.save()
-                self.send('SID_CHANNEL_CREATED', channel=c)
-                return 'IdleChatState'
+        assert action_id == 'SID_GET_CHANNEL_NAME'
+        if event.is_text_message:
+            logging.debug("[U#%s] Desired channel name is: %s",
+                          event.sender_id, event.message_text)
+            c = self.create_channel(event.message_text)
+            return HandlerResult('GetChannelDescChatState', chid=c.chid)
 
+        self.show()
         return None
+
+
+@step_collection.register
+class GetChannelDescChatState(BasicChatState):
+    MSG_STR_ID = 'SID_GET_CHANNEL_DESC'
+
+    def show(self):
+        chid = self.extra_params['chid']
+        self._register_for_user_input(str(chid))
+        super().show(channel=Channel.by_chid(chid))
+
+    def on_user_input(self, action_id, event):
+        logging.debug("[U#%s] on_user_input arrived: %s",
+                      event.sender_id, action_id)
+        if event.is_text_message:
+            c = Channel.by_chid(action_id)
+            logging.debug("[U#%s] Desired %s channel desc is: %s",
+                          event.sender_id, c.str_chid, event.message_text)
+            c.desc = event.message_text
+            c.save()
+            self.send('SID_CHANNEL_CREATED', channel=c)
+            return HandlerResult('ChannelCreationDoneChatState',
+                                 chid=action_id)
+
+        self.extra_params['chid'] = action_id
+        self.show()
+        return None
+
+@step_collection.register
+class ChannelCreationDoneChatState(BasicChatState):
+    MSG_STR_ID = 'SID_CHANNEL_CREATED'
+
+    def show(self):
+        chid = self.extra_params['chid']
+        super().show(channel=Channel.by_chid(chid))
 
 
 class BotChat(object):
