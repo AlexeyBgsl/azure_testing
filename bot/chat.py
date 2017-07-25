@@ -246,7 +246,6 @@ class GetChannelDescChatState(BasicChatState):
                           event.sender_id, c.str_chid, event.message_text)
             c.desc = event.message_text
             c.save()
-            self.send('SID_CHANNEL_CREATED', channel=c)
             return HandlerResult('ChannelCreationDoneChatState',
                                  chid=action_id)
 
