@@ -1,4 +1,5 @@
 import logging
+import re
 from abc import ABC
 from fbmq import QuickReply, Template
 from bot.translations import BotString
@@ -193,7 +194,7 @@ class BrowseChannelsChatState(BasicChatState):
 class MyChannelsChatState(BasicChatState):
     QREP_CTA = [
         CallToAction('SID_CREATE_CHANNEL', 'CreateChannelsChatState'),
-        NoCallToAction('SID_EDIT_CHANNEL'),
+        CallToAction('SID_EDIT_CHANNEL', 'EditChannelRootChatState'),
         NoCallToAction('SID_LIST_MY_CHANNELS'),
     ]
     MSG_STR_ID = 'SID_MY_CHANNELS_PROMPT'
@@ -256,6 +257,58 @@ class GetChannelDescChatState(BasicChatState):
 @step_collection.register
 class ChannelCreationDoneChatState(BasicChatState):
     MSG_STR_ID = 'SID_CHANNEL_CREATED'
+
+    def show(self):
+        chid = self.extra_params['chid']
+        super().show(channel=Channel.by_chid(chid))
+
+
+@step_collection.register
+class EditChannelRootChatState(BasicChatState):
+    MSG_STR_ID = 'SID_SELECT_CHANNEL_PROMPT'
+
+    def on_selection(self, chid):
+        c = Channel.by_chid(chid)
+        if c:
+            return HandlerResult('EditChannelTypeChatState', chid=chid)
+        return HandlerResult(self.class_name())
+
+    def _prepare_qreps(self):
+        ch_list = Channel.by_owner_uid(self.user.oid)
+        qreps = []
+        for e in ch_list:
+            c = Channel(entity=e)
+            p = Payload('ClbQRep', self.class_name(), str(c.oid))
+            qreps.append(QuickReply(c.name, str(p)))
+        return qreps
+
+    def show(self):
+        self._register_for_user_input('SID_CHANNEL_ID')
+        super().show()
+
+    def on_quick_response(self, action_id, event):
+        return self.on_selection(action_id)
+
+    def on_user_input(self, action_id, event):
+        logging.debug("[U#%s] on_user_input arrived: %s",
+                      event.sender_id, action_id)
+        if event.is_text_message:
+            chid = re.sub(r"\s+", "", event.message_text, flags=re.UNICODE)
+            chid = re.sub(r"-", "", chid)
+            return self.on_selection(chid)
+
+        self.show()
+        return None
+
+
+@step_collection.register
+class EditChannelTypeChatState(BasicChatState):
+    QREP_CTA = [
+        NoCallToAction('SID_EDIT_CHANNEL_NAME'),
+        NoCallToAction('SID_EDIT_CHANNEL_DESC'),
+        NoCallToAction('SID_EDIT_CHANNEL_DELETE'),
+    ]
+    MSG_STR_ID = 'SID_SELECT_CHANNEL_EDIT_ACTION'
 
     def show(self):
         chid = self.extra_params['chid']

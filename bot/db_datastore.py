@@ -111,12 +111,13 @@ class Channels(BasicTable):
     def __init__(self):
         super().__init__(kind="Channels", exclude_from_indexes=('desc',))
 
-    def by_chid(self, chid):
-        return self.simple_query(chid=chid)
-
 
 class Channel(BasicEntry):
     table = Channels()
+
+    @classmethod
+    def by_owner_uid(cls, owner_uid):
+        return cls.table.simple_query(owner_uid=owner_uid)
 
     @classmethod
     def by_chid(cls, chid):

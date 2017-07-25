@@ -45,6 +45,12 @@ DefaultStrings = dict(
                           'Channel ID is $CHANNEL_ID.\n'
                           'Enter channel description'),
     SID_CHANNEL_CREATED='Channel $CHANNEL_NAME ($CHANNEL_ID) is ready to use',
+    SID_SELECT_CHANNEL_PROMPT=('Please select a desired Channel from list '
+                               'or enter Channel ID'),
+    SID_SELECT_CHANNEL_EDIT_ACTION='What do you want to do with channel $CHANNEL_NAME?',
+    SID_EDIT_CHANNEL_NAME='Change Name',
+    SID_EDIT_CHANNEL_DESC='Change Description',
+    SID_EDIT_CHANNEL_DELETE='Delete Channel',
 )
 
 
