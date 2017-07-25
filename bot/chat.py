@@ -116,6 +116,19 @@ class BasicChatState(ABC):
         if self.MSG_STR_ID:
             self.send(self.MSG_STR_ID, channel=channel, with_qreps=True)
 
+    def reinstantiate(self, channel=None):
+        c = None
+        if channel:
+            if isinstance(channel, Channel):
+                c = channel
+            elif isinstance(channel, str):
+                c = Channel.by_chid(channel)
+            elif isinstance(channel, int):
+                c = Channel.by_chid(channel)
+        self.send('SID_DONT_UNDERSTAND', channel=c, with_qreps=False)
+        return HandlerResult(self.class_name(),
+                             chid=c.oid if c else None)
+
     def on_user_input(self, action_id, event):
         return None
 
@@ -224,8 +237,7 @@ class CreateChannelsChatState(BasicChatState):
             c = self.create_channel(event.message_text)
             return HandlerResult('GetChannelDescChatState', chid=c.chid)
 
-        self.show()
-        return None
+        return self.reinstantiate(action_id)
 
 
 @step_collection.register
@@ -249,9 +261,7 @@ class GetChannelDescChatState(BasicChatState):
             return HandlerResult('ChannelCreationDoneChatState',
                                  chid=action_id)
 
-        self.extra_params['chid'] = action_id
-        self.show()
-        return None
+        return self.reinstantiate(action_id)
 
 @step_collection.register
 class ChannelCreationDoneChatState(BasicChatState):
@@ -296,8 +306,7 @@ class EditChannelRootChatState(BasicChatState):
             chid = re.sub(r"-", "", chid)
             return self.on_selection(chid)
 
-        self.show()
-        return None
+        return self.reinstantiate()
 
 
 @step_collection.register
