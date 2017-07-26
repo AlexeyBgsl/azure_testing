@@ -1,6 +1,28 @@
 from abc import ABC
-from google.cloud import datastore
+import logging
+import functools
+from google.cloud import datastore, exceptions
 from bot.config import CONFIG
+
+
+MAX_RETRY_ATTEMPTS=5
+
+
+def retry_db(f):
+    @functools.wraps(f)
+    def wrapped(*args, **kwargs):
+        last_exception = None
+        for i in range(MAX_RETRY_ATTEMPTS):
+            try:
+                return f(*args, **kwargs)
+            except exceptions.Conflict as e:
+                logging.warning("Retry#%d: function %s due to %s",
+                                i, f.__name__, str(e))
+                last_exception = e
+                continue
+        raise last_exception
+
+    return wrapped
 
 
 # See https://googlecloudplatform.github.io/google-cloud-python/stable/datastore-client.html
@@ -78,6 +100,7 @@ class BasicTable(ABC):
         entity.update(data)
         return entity
 
+    @retry_db
     def update(self, data, oid=None):
         entity = self.entity(data, oid)
         self.client.put(entity)
@@ -86,6 +109,7 @@ class BasicTable(ABC):
     def read(self, oid):
         return self.client.get(self._get_key(oid))
 
+    @retry_db
     def delete(self, oid):
         self.client.delete(self._get_key(oid))
 
@@ -207,6 +231,7 @@ class Channel(BasicEntry):
         return False
 
 
+@retry_db
 def subscribe(uid, chid):
     with BasicTable.client.transaction() as t:
         ue = User.entity_by_oid(uid)
@@ -222,6 +247,7 @@ def subscribe(uid, chid):
     return False
 
 
+@retry_db
 def unsubscribe(uid, chid):
     with BasicTable.client.transaction() as t:
         ue = User.entity_by_oid(uid)
