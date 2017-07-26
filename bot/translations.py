@@ -11,6 +11,8 @@ def default_strings_to_db(override=False):
 
 
 DefaultStrings = dict(
+    SID_YES='Yes',
+    SID_NO='No',
     SID_GREETING='Hi {{user_first_name}}, welcome to Locano Chatbot',
     SID_DONT_UNDERSTAND='Sorry, I don\'t understand you',
     SID_MENU_CHANNELS='Channels',
@@ -57,6 +59,9 @@ DefaultStrings = dict(
     SID_CHANNEL_NAME_CHANGED='Channel $CHANNEL_ID name changed successfully',
     SID_EDIT_CHANNEL_DESC_PROMPT='Please enter new Channel Description',
     SID_CHANNEL_DESC_CHANGED='Channel $CHANNEL_NAME description changed successfully',
+    SID_DEL_CHANNEL_PROMPT='Are you sure?',
+    SID_CHANNEL_REMOVED="Channel successfully removed",
+    SID_CHANNEL_UNCHANGED="Channel remains unchanged",
 )
 
 

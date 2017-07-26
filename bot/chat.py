@@ -308,7 +308,7 @@ class EditChannelTypeChatState(BasicChatState):
     QREP_CTA = [
         CallToAction('SID_EDIT_CHANNEL_NAME', 'EditChannelNameChatState'),
         CallToAction('SID_EDIT_CHANNEL_DESC', 'EditChannelDescChatState'),
-        NoCallToAction('SID_EDIT_CHANNEL_DELETE'),
+        CallToAction('SID_EDIT_CHANNEL_DELETE', 'DeleteChannelChatState'),
     ]
     MSG_STR_ID = 'SID_SELECT_CHANNEL_EDIT_ACTION'
 
@@ -339,6 +339,26 @@ class EditChannelDescChatState(BasicChatState):
             c.desc = event.message_text.strip()
             c.save()
             return self.done('SID_CHANNEL_DESC_CHANGED')
+
+        return self.reinstantiate()
+
+
+@step_collection.register
+class DeleteChannelChatState(BasicChatState):
+    MSG_STR_ID = 'SID_DEL_CHANNEL_PROMPT'
+    QREP_CTA = [
+        CallToAction('SID_YES', 'YesPseudoChatState'),
+        CallToAction('SID_NO', 'NoPseudoChatState'),
+    ]
+
+    def on_quick_response(self, action_id, event):
+        if action_id == 'YesPseudoChatState':
+            c = self._channel
+            c.delete()
+            return self.done('SID_CHANNEL_REMOVED')
+
+        if  action_id == 'NoPseudoChatState':
+            return self.done('SID_CHANNEL_UHCNANGED')
 
         return self.reinstantiate()
 
