@@ -8,6 +8,10 @@ from bot.config import CONFIG
 class BasicEntry(ABC):
     table = None
 
+    @classmethod
+    def entity_by_oid(cls, oid):
+        return cls.table.read(oid)
+
     def __add_db_property(self, name):
         if not name in self.db_fields:
             self.db_fields.append(name)
@@ -35,6 +39,9 @@ class BasicEntry(ABC):
         for key in self.db_fields:
             d[key] = getattr(self, key)
         return d
+
+    def to_entity(self):
+        return self.table.entity(self.to_dict(), self.oid)
 
     def adjust_oid(self, entity):
         self.oid = entity.key.id
@@ -115,6 +122,11 @@ class User(BasicEntry):
         e = cls.table.by_fbid(fbid)
         return cls(e) if e else None
 
+    @classmethod
+    def by_oid(cls, oid):
+        e = cls.entity_by_oid(oid)
+        return cls(e) if e else None
+
     def __init__(self, entity):
         super().__init__()
         self.add_db_field('fbid', 0)
@@ -123,20 +135,22 @@ class User(BasicEntry):
         if entity:
             self.from_entity(entity)
 
-    def is_subscribed(self, chid):
-        return chid in self.subscription
-
-    def subscribe(self, chid, autosave=True):
+    def _subscribe(self, chid):
         if chid not in self.subscriptions:
             self.subscriptions.append(chid)
-            if autosave:
-                self.save()
+            return True
+        return False
 
-    def unsubscribe(self, chid, autosave=True):
+    def _unsubscribe(self, chid):
         if chid in self.subscriptions:
             self.subscriptions.remove(chid)
-            if autosave:
-                self.save()
+            return True
+        return False
+
+    def delete(self):
+        while len(self.subscriptions):
+            unsubscribe(self.oid, self.subscriptions[0])
+        super().delete()
 
 
 class Channels(BasicTable):
@@ -162,8 +176,14 @@ class Channel(BasicEntry):
         self.add_db_field('owner_uid', owner_uid)
         self.add_db_field('name', name)
         self.add_db_field('desc', '')
+        self.add_db_field('subscribers', [])
         if entity:
             self.from_entity(entity)
+
+    def delete(self):
+        while len(self.subscribers):
+            unsubscribe(uid=self.subscribers[0], chid=self.chid)
+        super().delete()
 
     @property
     def chid(self):
@@ -173,3 +193,44 @@ class Channel(BasicEntry):
     def str_chid(self):
         s = str(self.oid).ljust(16, '0')
         return '{}-{}-{}-{}'.format(s[:4], s[4:8], s[8:12], s[12:16])
+
+    def _subscribe(self, uid):
+        if uid not in self.subscribers:
+            self.subscribers.append(uid)
+            return True
+        return False
+
+    def _unsubscribe(self, uid):
+        if uid in self.subscribers:
+            self.subscribers.remove(uid)
+            return True
+        return False
+
+
+def subscribe(uid, chid):
+    with BasicTable.client.transaction() as t:
+        ue = User.entity_by_oid(uid)
+        ce = Channel.entity_by_oid(chid)
+        if ue and ce:
+            u = User(entity=ue)
+            c = Channel(entity=ce)
+            if u._subscribe(chid):
+                t.put(u.to_entity())
+            if c._subscribe(uid):
+                t.put(c.to_entity())
+            return True
+    return False
+
+
+def unsubscribe(uid, chid):
+    with BasicTable.client.transaction() as t:
+        ue = User.entity_by_oid(uid)
+        if ue:
+            u = User(entity=ue)
+            if u._unsubscribe(chid):
+                t.put(u.to_entity())
+        ce = Channel.entity_by_oid(chid)
+        if ce:
+            c = Channel(entity=ce)
+            if c._unsubscribe(uid):
+                t.put(c.to_entity())

@@ -3,7 +3,7 @@ import re
 from abc import ABC
 from fbmq import QuickReply, Template
 from bot.translations import BotString
-from bot.db_datastore import Channel
+from bot.db_datastore import Channel, subscribe, unsubscribe
 
 
 BotChatClbTypes = dict(
@@ -409,7 +409,7 @@ class SubDelChatState(BasicChatState):
 
     def on_quick_response(self, action_id, event):
         if action_id == 'YesPseudoChatState':
-            self.user.unsubscribe(self.chid)
+            unsubscribe(uid=self.user.oid, chid=self.chid)
             return self.done('SID_SUB_REMOVED')
 
         if  action_id == 'NoPseudoChatState':
@@ -429,9 +429,9 @@ class SubAddChatState(BasicChatState):
             chid = re.sub(r"-", "", chid)
             c = Channel.by_chid(chid)
             if c:
-                self.user.subscribe(chid)
+                res = subscribe(uid=self.user.oid, chid=chid)
                 self.chid = chid
-                return self.done('SID_SUB_ADDED')
+                return self.done('SID_SUB_ADDED' if res else 'SID_ERROR')
 
         return self.reinstantiate()
 
