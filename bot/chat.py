@@ -371,19 +371,30 @@ class SubscriptionsRootChatState(BasicChatState):
     ]
     MSG_STR_ID = 'SID_SUBSCRIPTIONS_PROMPT'
 
+    def _prepare_qreps(self):
+        qreps = []
+        has_subs = True if len(self.user.subscriptions) else False
+        for cta in self.QREP_CTA:
+            if not has_subs and cta.class_name == 'SubsListChatState':
+                continue
+            p = Payload('ClbQRep', self.class_name(), cta.action_id,
+                        param=self.chid)
+            qreps.append(QuickReply(cta.title(self.user), str(p)))
+        return qreps
+
 
 @step_collection.register
 class SubsListChatState(BasicChatState):
     MSG_STR_ID = 'SID_SELECT_SUB_PROMPT'
+
     def _prepare_qreps(self):
-        if not len(self.user.subscriptions):
-            self.MSG_STR_ID = 'SID_NO_SUBS_PROMPT'
-            return None
-        qreps = []
-        for chid in self.user.subscriptions:
-            c = Channel.by_chid(chid)
-            p = Payload('ClbQRep', self.class_name(), str(c.oid))
-            qreps.append(QuickReply(c.name, str(p)))
+        qreps = None
+        if len(self.user.subscriptions):
+            qreps = []
+            for chid in self.user.subscriptions:
+                c = Channel.by_chid(chid)
+                p = Payload('ClbQRep', self.class_name(), str(c.oid))
+                qreps.append(QuickReply(c.name, str(p)))
         return qreps
 
     def on_quick_response(self, action_id, event):
