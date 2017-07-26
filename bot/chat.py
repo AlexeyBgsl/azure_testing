@@ -366,11 +366,71 @@ class DeleteChannelChatState(BasicChatState):
 @step_collection.register
 class SubscriptionsRootChatState(BasicChatState):
     QREP_CTA = [
-        NoCallToAction('SID_LIST_SUBSCRIPTIONS'),
-        NoCallToAction('SID_ADD_SUBSCRIPTION'),
-        NoCallToAction('SID_DEL_SUBSCRIPTION'),
+        CallToAction('SID_LIST_SUBSCRIPTIONS', 'SubsListChatState'),
+        CallToAction('SID_ADD_SUBSCRIPTION', 'SubAddChatState'),
     ]
     MSG_STR_ID = 'SID_SUBSCRIPTIONS_PROMPT'
+
+
+@step_collection.register
+class SubsListChatState(BasicChatState):
+    MSG_STR_ID = 'SID_SELECT_SUB_PROMPT'
+    def _prepare_qreps(self):
+        qreps = []
+        for chid in self.user.subscriptions:
+            c = Channel.by_chid(chid)
+            p = Payload('ClbQRep', self.class_name(), str(c.oid))
+            qreps.append(QuickReply(c.name, str(p)))
+        return qreps
+
+    def on_quick_response(self, action_id, event):
+        return HandlerResult('SubSelectActionState', chid=action_id)
+
+
+@step_collection.register
+class SubSelectActionState(BasicChatState):
+    QREP_CTA = [
+        CallToAction('SID_SUB_DELETE', 'SubDelChatState'),
+        NoCallToAction('SID_SUB_SHOW_ANNCS'),
+    ]
+    MSG_STR_ID = 'SID_SELECT_SUB_ACTION_PROMPT'
+
+
+@step_collection.register
+class SubDelChatState(BasicChatState):
+    MSG_STR_ID = 'SID_SUB_UNSUBSCRIBE_PROMPT'
+    QREP_CTA = [
+        CallToAction('SID_YES', 'YesPseudoChatState'),
+        CallToAction('SID_NO', 'NoPseudoChatState'),
+    ]
+
+    def on_quick_response(self, action_id, event):
+        if action_id == 'YesPseudoChatState':
+            self.user.unsubscribe(self.chid)
+            return self.done('SID_SUB_REMOVED')
+
+        if  action_id == 'NoPseudoChatState':
+            return self.done('SID_SUB_UNCHANGED')
+
+        return self.reinstantiate()
+
+
+@step_collection.register
+class SubAddChatState(BasicChatState):
+    MSG_STR_ID = 'SID_ENTER_CHANNEL_ID_PROMPT'
+    USER_INPUT = True
+
+    def on_user_input(self, event):
+        if event.is_text_message:
+            chid = re.sub(r"\s+", "", event.message_text, flags=re.UNICODE)
+            chid = re.sub(r"-", "", chid)
+            c = Channel.by_chid(chid)
+            if c:
+                self.user.subscribe(chid)
+                self.chid = chid
+                return self.done('SID_SUB_ADDED')
+
+        return self.reinstantiate()
 
 
 class BotChat(object):

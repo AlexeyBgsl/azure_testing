@@ -92,8 +92,24 @@ class User(BasicEntry):
         super().__init__(table)
         self.add_db_field('fbid', 0)
         self.add_db_field('fbmsgseq', 0)
+        self.add_db_field('subscriptions', [])
         if entity:
             self.from_entity(entity)
+
+    def is_subscribed(self, chid):
+        return chid in self.subscription
+
+    def subscribe(self, chid, autosave=True):
+        if chid not in self.subscriptions:
+            self.subscriptions.append(chid)
+            if autosave:
+                self.save()
+
+    def unsubscribe(self, chid, autosave=True):
+        if chid in self.subscriptions:
+            self.subscriptions.remove(chid)
+            if autosave:
+                self.save()
 
 
 class Users(BasicTable):
