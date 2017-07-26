@@ -6,10 +6,6 @@ from bot.config import CONFIG
 # See https://googlecloudplatform.github.io/google-cloud-python/stable/datastore-client.html
 
 class BasicEntry(ABC):
-    @classmethod
-    def create(cls, table, data):
-        return cls(table, table.update(data))
-
     def __add_db_property(self, name):
         if not name in self.db_fields:
             self.db_fields.append(name)
@@ -39,9 +35,12 @@ class BasicEntry(ABC):
             d[key] = getattr(self, key)
         return d
 
+    def adjust_oid(self, entity):
+        self.oid = entity.key.id
+
     def save(self):
         entity = self.table.update(self.to_dict(), self.oid)
-        self.oid = entity.key.id
+        self.adjust_oid(entity)
 
     def read(self):
         entity = self.table.read(self.oid)
@@ -64,11 +63,15 @@ class BasicTable(ABC):
             return self.client.key(self.kind, int(oid))
         return self.client.key(self.kind)
 
-    def update(self, data, oid=None):
+    def entity(self, data, oid=None):
         entity = datastore.Entity(
             key=self._get_key(oid),
             exclude_from_indexes=self.exclude_from_indexes)
         entity.update(data)
+        return entity
+
+    def update(self, data, oid=None):
+        entity = self.entity(data, oid)
         self.client.put(entity)
         return entity
 
@@ -89,6 +92,10 @@ class BasicTable(ABC):
 
 
 class User(BasicEntry):
+    @classmethod
+    def create(cls, table, data):
+        return cls(table, table.entity(data))
+
     def __init__(self, table, entity):
         super().__init__(table)
         self.add_db_field('fbid', 0)
@@ -158,5 +165,3 @@ class Channel(BasicEntry):
     def str_chid(self):
         s = str(self.oid).ljust(16, '0')
         return '{}-{}-{}-{}'.format(s[:4], s[4:8], s[8:12], s[12:16])
-
-
