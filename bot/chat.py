@@ -71,7 +71,7 @@ class CallToAction(object):
 
 
 class NoCallToAction(CallToAction):
-    CLS_NAME = 'IdleChatState'
+    CLS_NAME = 'NotImplementedChatState'
 
     def __init__(self, title_sid):
         super().__init__(title_sid, self.CLS_NAME)
@@ -129,6 +129,10 @@ class BasicChatState(ABC):
         if self.MSG_STR_ID:
             self._send(self.MSG_STR_ID, with_qreps=True)
 
+    def done(self, sid):
+        self._send(sid=sid)
+        return HandlerResult('IdleChatState')
+
     def reinstantiate(self):
         self._send('SID_DONT_UNDERSTAND', with_qreps=False)
         return HandlerResult(self.class_name(), chid=self.chid)
@@ -149,9 +153,14 @@ class BasicChatState(ABC):
         logging.debug("%s: on_action(%s): %s arrived",
                       self.class_name(), type, action_id)
         if type == 'ClbQRep':
+            logging.debug("[U#%s] on_quick_response(%s)",
+                          event.sender_id, action_id)
             return self.on_quick_response(action_id, event)
         elif type == 'ClbMsg':
             assert action_id == 'UsrInput'
+            logging.debug("[U#%s] on_user_input(%s)",
+                          event.sender_id,
+                          event.message_text if event.is_text_message else '')
             return self.on_user_input(event)
         else:
             logging.warning("%s: on_action(%s): unknown type",
@@ -174,7 +183,12 @@ class RootChatState(BasicChatState):
 
 
 @step_collection.register
-class IdleChatState(BasicChatState):
+class IdleChatState(RootChatState):
+    MSG_STR_ID = 'SID_IDLE_PROMPT'
+
+
+@step_collection.register
+class NotImplementedChatState(RootChatState):
     MSG_STR_ID = 'SID_DBG_NO_ACTION'
 
 
@@ -230,7 +244,6 @@ class CreateChannelsChatState(BasicChatState):
         return c
 
     def on_user_input(self, event):
-        logging.debug("[U#%s] on_user_input arrived", event.sender_id)
         if event.is_text_message:
             logging.debug("[U#%s] Desired channel name is: %s",
                           event.sender_id, event.message_text)
@@ -247,21 +260,15 @@ class GetChannelDescChatState(BasicChatState):
 
     def on_user_input(self, event):
         assert self.chid
-        logging.debug("[U#%s] on_user_input arrived", event.sender_id)
         if event.is_text_message:
             c = self._channel
             logging.debug("[U#%s] Desired %s channel desc is: %s",
                           event.sender_id, c.str_chid, event.message_text)
             c.desc = event.message_text
             c.save()
-            return HandlerResult('ChannelCreationDoneChatState',
-                                 chid=self.chid)
+            return self.done('SID_CHANNEL_CREATED')
 
         return self.reinstantiate()
-
-@step_collection.register
-class ChannelCreationDoneChatState(BasicChatState):
-    MSG_STR_ID = 'SID_CHANNEL_CREATED'
 
 
 @step_collection.register
@@ -288,7 +295,6 @@ class EditChannelRootChatState(BasicChatState):
         return self.on_selection(action_id)
 
     def on_user_input(self, event):
-        logging.debug("[U#%s] on_user_input arrived: %s", event.sender_id)
         if event.is_text_message:
             chid = re.sub(r"\s+", "", event.message_text, flags=re.UNICODE)
             chid = re.sub(r"-", "", chid)
@@ -300,11 +306,41 @@ class EditChannelRootChatState(BasicChatState):
 @step_collection.register
 class EditChannelTypeChatState(BasicChatState):
     QREP_CTA = [
-        NoCallToAction('SID_EDIT_CHANNEL_NAME'),
-        NoCallToAction('SID_EDIT_CHANNEL_DESC'),
+        CallToAction('SID_EDIT_CHANNEL_NAME', 'EditChannelNameChatState'),
+        CallToAction('SID_EDIT_CHANNEL_DESC', 'EditChannelDescChatState'),
         NoCallToAction('SID_EDIT_CHANNEL_DELETE'),
     ]
     MSG_STR_ID = 'SID_SELECT_CHANNEL_EDIT_ACTION'
+
+
+@step_collection.register
+class EditChannelNameChatState(BasicChatState):
+    MSG_STR_ID = 'SID_EDIT_CHANNEL_NAME_PROMPT'
+    USER_INPUT = True
+
+    def on_user_input(self, event):
+        if event.is_text_message:
+            c = self._channel
+            c.name = event.message_text.strip()
+            c.save()
+            return self.done('SID_CHANNEL_NAME_CHANGED')
+
+        return self.reinstantiate()
+
+
+@step_collection.register
+class EditChannelDescChatState(BasicChatState):
+    MSG_STR_ID = 'SID_EDIT_CHANNEL_DESC_PROMPT'
+    USER_INPUT = True
+
+    def on_user_input(self, event):
+        if event.is_text_message:
+            c = self._channel
+            c.desc = event.message_text.strip()
+            c.save()
+            return self.done('SID_CHANNEL_DESC_CHANGED')
+
+        return self.reinstantiate()
 
 
 class BotChat(object):

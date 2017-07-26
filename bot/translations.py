@@ -23,6 +23,7 @@ DefaultStrings = dict(
     SID_ROOT_PROMPT=('Hi! Welcome to Locano Bot. '
                      'We do information channels. You can create yours '
                      'or subscribe to someones else\'s. Try these commands:'),
+    SID_IDLE_PROMPT='What do you want to do next?',
     SID_BROWSE_CHANNELS='Browse Channels',
     SID_MAKE_ANNOUNCEMENT='Make an Announcement',
     SID_BROWSE_CHANNELS_PROMPT='Please choose a subject you are interested in',
@@ -52,6 +53,10 @@ DefaultStrings = dict(
     SID_EDIT_CHANNEL_NAME='Change Name',
     SID_EDIT_CHANNEL_DESC='Change Description',
     SID_EDIT_CHANNEL_DELETE='Delete Channel',
+    SID_EDIT_CHANNEL_NAME_PROMPT='Please enter new Channel Name',
+    SID_CHANNEL_NAME_CHANGED='Channel $CHANNEL_ID name changed successfully',
+    SID_EDIT_CHANNEL_DESC_PROMPT='Please enter new Channel Description',
+    SID_CHANNEL_DESC_CHANGED='Channel $CHANNEL_NAME description changed successfully',
 )
 
 
