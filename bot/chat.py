@@ -21,22 +21,27 @@ class Payload(object):
         params = payload.split(cls.DELIMITER)
 
         for k, v in BotChatClbTypes.items():
-            if params[0] == v:
-                return cls(k, params[1], params[2])
+            if params[0] == v and len(params) > 2:
+                param = params[3] if len(params) > 3 else None
+                return cls(k, params[1], params[2], param)
 
         return None
 
-    def __init__(self, type, class_name, action_id):
+    def __init__(self, type, class_name, action_id, param=None):
         if not class_name or not type or not action_id:
             raise ValueError(
                 "{}: all fields are mandatory".format(self.__name__))
         self.class_name = class_name
         self.type = type
         self.action_id = action_id
+        self.param = param
 
     def __str__(self):
-        return BotChatClbTypes[self.type] + self.DELIMITER + \
-               self.class_name + self.DELIMITER + self.action_id
+        s = BotChatClbTypes[self.type] + self.DELIMITER + \
+            self.class_name + self.DELIMITER + self.action_id
+        if self.param:
+            s = s + self.DELIMITER + self.param
+        return s
 
 
 class ClassCollection(object):
@@ -81,55 +86,54 @@ class HandlerResult():
 class BasicChatState(ABC):
     QREP_CTA = []
     MSG_STR_ID = None
+    USER_INPUT = False
 
     @classmethod
     def class_name(cls):
         return cls.__name__
+
+    @property
+    def _channel(self):
+        return Channel.by_chid(self.chid) if self.chid else None
 
     def _prepare_qreps(self):
         if not self.QREP_CTA:
             return None
         qreps = []
         for cta in self.QREP_CTA:
-            p = Payload('ClbQRep', self.class_name(), cta.action_id)
+            p = Payload('ClbQRep', self.class_name(), cta.action_id,
+                        param=self.chid)
             qreps.append(QuickReply(cta.title(self.user), str(p)))
         return qreps
 
-    def send(self, sid, channel=None, with_qreps=False):
+    def _send(self, sid, with_qreps=False):
         qreps = self._prepare_qreps() if with_qreps else None
-        message = self.get_message(sid, channel=channel)
+        message = self.get_message(sid)
         self.page.send(self.user.fbid, message, quick_replies=qreps)
 
-    def _register_for_user_input(self, action_id):
-        p = Payload('ClbMsg', self.class_name(), action_id)
+    def _register_for_user_input(self):
+        p = Payload('ClbMsg', self.class_name(), 'UsrInput', param=self.chid)
         self.page.register_for_message(self.user, str(p))
 
-    def __init__(self, page, user, **kwargs):
+    def __init__(self, page, user, chid=None):
         self.page = page
         self.user = user
-        self.extra_params = kwargs
+        self.chid = chid
 
-    def get_message(self, sid=MSG_STR_ID, channel=None):
-        return str(BotString(sid, user=self.user, channel=channel))
+    def get_message(self, sid=MSG_STR_ID):
+        return str(BotString(sid, user=self.user, channel=self._channel))
 
-    def show(self, channel=None):
+    def show(self):
+        if self.USER_INPUT:
+            self._register_for_user_input()
         if self.MSG_STR_ID:
-            self.send(self.MSG_STR_ID, channel=channel, with_qreps=True)
+            self._send(self.MSG_STR_ID, with_qreps=True)
 
-    def reinstantiate(self, channel=None):
-        c = None
-        if channel:
-            if isinstance(channel, Channel):
-                c = channel
-            elif isinstance(channel, str):
-                c = Channel.by_chid(channel)
-            elif isinstance(channel, int):
-                c = Channel.by_chid(channel)
-        self.send('SID_DONT_UNDERSTAND', channel=c, with_qreps=False)
-        return HandlerResult(self.class_name(),
-                             chid=c.oid if c else None)
+    def reinstantiate(self):
+        self._send('SID_DONT_UNDERSTAND', with_qreps=False)
+        return HandlerResult(self.class_name(), chid=self.chid)
 
-    def on_user_input(self, action_id, event):
+    def on_user_input(self, event):
         return None
 
     def on_quick_response(self, action_id, event):
@@ -137,16 +141,18 @@ class BasicChatState(ABC):
             if cta.action_id == action_id:
                 logging.debug("%s: next CTA: %s",
                               self.class_name(), cta.class_name)
-                return HandlerResult(cta.class_name)
+                return HandlerResult(cta.class_name, chid=self.chid)
         return None
 
-    def on_action(self, type, action_id, event):
+    def on_action(self, type, action_id, param, event):
+        self.chid = param
         logging.debug("%s: on_action(%s): %s arrived",
                       self.class_name(), type, action_id)
         if type == 'ClbQRep':
             return self.on_quick_response(action_id, event)
         elif type == 'ClbMsg':
-            return self.on_user_input(action_id, event)
+            assert action_id == 'UsrInput'
+            return self.on_user_input(event)
         else:
             logging.warning("%s: on_action(%s): unknown type",
                             self.class_name(), type)
@@ -216,65 +222,52 @@ class MyChannelsChatState(BasicChatState):
 @step_collection.register
 class CreateChannelsChatState(BasicChatState):
     MSG_STR_ID = 'SID_GET_CHANNEL_NAME'
-
-    def show(self):
-        assert self.MSG_STR_ID
-        self._register_for_user_input('SID_GET_CHANNEL_NAME')
-        super().show()
+    USER_INPUT = True
 
     def create_channel(self, name):
         c = Channel(name=name, owner_uid=self.user.oid)
         c.save()
         return c
 
-    def on_user_input(self, action_id, event):
-        logging.debug("[U#%s] on_user_input arrived: %s",
-                      event.sender_id, action_id)
-        assert action_id == 'SID_GET_CHANNEL_NAME'
+    def on_user_input(self, event):
+        logging.debug("[U#%s] on_user_input arrived", event.sender_id)
         if event.is_text_message:
             logging.debug("[U#%s] Desired channel name is: %s",
                           event.sender_id, event.message_text)
             c = self.create_channel(event.message_text)
-            return HandlerResult('GetChannelDescChatState', chid=c.chid)
+            return HandlerResult('GetChannelDescChatState', chid=str(c.chid))
 
-        return self.reinstantiate(action_id)
+        return self.reinstantiate()
 
 
 @step_collection.register
 class GetChannelDescChatState(BasicChatState):
     MSG_STR_ID = 'SID_GET_CHANNEL_DESC'
+    USER_INPUT = True
 
-    def show(self):
-        chid = self.extra_params['chid']
-        self._register_for_user_input(str(chid))
-        super().show(channel=Channel.by_chid(chid))
-
-    def on_user_input(self, action_id, event):
-        logging.debug("[U#%s] on_user_input arrived: %s",
-                      event.sender_id, action_id)
+    def on_user_input(self, event):
+        assert self.chid
+        logging.debug("[U#%s] on_user_input arrived", event.sender_id)
         if event.is_text_message:
-            c = Channel.by_chid(action_id)
+            c = self._channel
             logging.debug("[U#%s] Desired %s channel desc is: %s",
                           event.sender_id, c.str_chid, event.message_text)
             c.desc = event.message_text
             c.save()
             return HandlerResult('ChannelCreationDoneChatState',
-                                 chid=action_id)
+                                 chid=self.chid)
 
-        return self.reinstantiate(action_id)
+        return self.reinstantiate()
 
 @step_collection.register
 class ChannelCreationDoneChatState(BasicChatState):
     MSG_STR_ID = 'SID_CHANNEL_CREATED'
 
-    def show(self):
-        chid = self.extra_params['chid']
-        super().show(channel=Channel.by_chid(chid))
-
 
 @step_collection.register
 class EditChannelRootChatState(BasicChatState):
     MSG_STR_ID = 'SID_SELECT_CHANNEL_PROMPT'
+    USER_INPUT = True
 
     def on_selection(self, chid):
         c = Channel.by_chid(chid)
@@ -291,16 +284,11 @@ class EditChannelRootChatState(BasicChatState):
             qreps.append(QuickReply(c.name, str(p)))
         return qreps
 
-    def show(self):
-        self._register_for_user_input('SID_CHANNEL_ID')
-        super().show()
-
     def on_quick_response(self, action_id, event):
         return self.on_selection(action_id)
 
-    def on_user_input(self, action_id, event):
-        logging.debug("[U#%s] on_user_input arrived: %s",
-                      event.sender_id, action_id)
+    def on_user_input(self, event):
+        logging.debug("[U#%s] on_user_input arrived: %s", event.sender_id)
         if event.is_text_message:
             chid = re.sub(r"\s+", "", event.message_text, flags=re.UNICODE)
             chid = re.sub(r"-", "", chid)
@@ -317,10 +305,6 @@ class EditChannelTypeChatState(BasicChatState):
         NoCallToAction('SID_EDIT_CHANNEL_DELETE'),
     ]
     MSG_STR_ID = 'SID_SELECT_CHANNEL_EDIT_ACTION'
-
-    def show(self):
-        chid = self.extra_params['chid']
-        super().show(channel=Channel.by_chid(chid))
 
 
 class BotChat(object):
@@ -342,6 +326,7 @@ class BotChat(object):
         if p:
             cls(page, user, scls_name=p.class_name).on_action(p.type,
                                                               p.action_id,
+                                                              p.param,
                                                               event)
         else:
             logging.warning("[U#%s] clb: bad payload: %s",
@@ -379,13 +364,13 @@ class BotChat(object):
     def start(self, event):
         self.state.show()
 
-    def on_action(self, type, action_id, event):
+    def on_action(self, type, action_id, param, event):
         logging.debug("%s: on_action(%s): %s arrived",
                       self.class_name(), type, action_id)
         if type == 'ClbMenu':
             result = self._on_menu(action_id, event)
         else:
-            result = self.state.on_action(type, action_id, event)
+            result = self.state.on_action(type, action_id, param, event)
         if result:
             self.instantiate_state(result)
             self.state.show()
