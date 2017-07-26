@@ -53,9 +53,10 @@ class BasicEntry(ABC):
 
 
 class BasicTable(ABC):
+    client = datastore.Client(CONFIG['PROJECT_ID'])
+
     def __init__(self, kind, exclude_from_indexes=()):
         self.kind = kind
-        self.client = datastore.Client(CONFIG['PROJECT_ID'])
         self.exclude_from_indexes = exclude_from_indexes
 
     def _get_key(self, oid=None):
