@@ -122,7 +122,7 @@ class String(BasicEntry):
         return list(DefaultStrings.keys())
 
     def __init__(self, sid=None):
-        super().__init__(self.table)
+        super().__init__()
         self.add_db_field('sid', '')
         if sid:
             self.load(sid)

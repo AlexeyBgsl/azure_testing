@@ -2,7 +2,7 @@ import logging
 import fbmq
 import functools
 from bot.config import CONFIG
-from bot.db_datastore import Users, User, BasicTable, BasicEntry
+from bot.db_datastore import User, BasicTable, BasicEntry
 from bot.chat import (
     BotChatClbTypes,
     chat_clb_handler,
@@ -81,7 +81,7 @@ class MsgHandler(BasicEntry):
         return h
 
     def __init__(self, entity=None):
-        super().__init__(self.table)
+        super().__init__()
         if entity:
             self.from_entity(entity)
 
@@ -92,14 +92,13 @@ class MsgHandler(BasicEntry):
 
 class BotPage(fbmq.Page):
     def __init__(self):
-        self.users = Users()
         super().__init__(CONFIG['ACCESS_TOKEN'])
         self.greeting(str(BotString('SID_GREETING')))
         self.show_starting_button(START_PAYLOAD)
         self.show_persistent_menu(BotChat.get_menu_buttons())
 
     def _user_from_fb_profile(self, fbid):
-        user = User.create(self.users, self.get_user_profile(fbid))
+        user = User.create(self.get_user_profile(fbid))
         user.fbid = fbid
         return user
 
@@ -115,7 +114,7 @@ class BotPage(fbmq.Page):
         return True
 
     def create_or_update_user(self, fbid):
-        user = self.users.by_fbid(fbid)
+        user = User.by_fbid(fbid)
         if user is None:
             user = self._user_from_fb_profile(fbid)
         return user

@@ -6,6 +6,8 @@ from bot.config import CONFIG
 # See https://googlecloudplatform.github.io/google-cloud-python/stable/datastore-client.html
 
 class BasicEntry(ABC):
+    table = None
+
     def __add_db_property(self, name):
         if not name in self.db_fields:
             self.db_fields.append(name)
@@ -23,9 +25,8 @@ class BasicEntry(ABC):
             if key != 'key':
                 self.add_db_field(key, e[key])
 
-    def __init__(self, table):
-        """Constructor"""
-        self.table = table
+    def __init__(self):
+        assert self.table
         self.oid = None
         self.db_fields = []
 
@@ -91,13 +92,31 @@ class BasicTable(ABC):
         return list(query.fetch())
 
 
-class User(BasicEntry):
-    @classmethod
-    def create(cls, table, data):
-        return cls(table, table.entity(data))
+class Users(BasicTable):
+    def __init__(self):
+        super().__init__(kind="Users")
 
-    def __init__(self, table, entity):
-        super().__init__(table)
+    def by_fbid(self, fbid):
+        results = self.simple_query(fbid=fbid)
+        if len(results) > 1:
+            raise ValueError("FB ID must be unique")
+        return results[0] if results else None
+
+
+class User(BasicEntry):
+    table = Users()
+
+    @classmethod
+    def create(cls, data):
+        return cls(cls.table.entity(data))
+
+    @classmethod
+    def by_fbid(cls, fbid):
+        e = cls.table.by_fbid(fbid)
+        return cls(e) if e else None
+
+    def __init__(self, entity):
+        super().__init__()
         self.add_db_field('fbid', 0)
         self.add_db_field('fbmsgseq', 0)
         self.add_db_field('subscriptions', [])
@@ -120,17 +139,6 @@ class User(BasicEntry):
                 self.save()
 
 
-class Users(BasicTable):
-    def __init__(self):
-        super().__init__(kind="Users")
-
-    def by_fbid(self, fbid):
-        results = self.simple_query(fbid=fbid)
-        if len(results) > 1:
-            raise ValueError("FB ID must be unique")
-        return User(self, entity=results[0]) if results else None
-
-
 class Channels(BasicTable):
     def __init__(self):
         super().__init__(kind="Channels", exclude_from_indexes=('desc',))
@@ -150,7 +158,7 @@ class Channel(BasicEntry):
             return cls(entity=e) if e else None
 
     def __init__(self, name=None, owner_uid=None, entity=None):
-        super().__init__(self.table)
+        super().__init__()
         self.add_db_field('owner_uid', owner_uid)
         self.add_db_field('name', name)
         self.add_db_field('desc', '')
