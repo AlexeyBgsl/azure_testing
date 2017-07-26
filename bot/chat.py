@@ -358,7 +358,7 @@ class DeleteChannelChatState(BasicChatState):
             return self.done('SID_CHANNEL_REMOVED')
 
         if  action_id == 'NoPseudoChatState':
-            return self.done('SID_CHANNEL_UHCNANGED')
+            return self.done('SID_CHANNEL_UNCHANGED')
 
         return self.reinstantiate()
 
