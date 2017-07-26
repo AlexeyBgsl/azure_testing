@@ -25,7 +25,6 @@ def is_primitive(obj):
 
 
 def dump_mfunc(f):
-    import functools
     @functools.wraps(f)
     def wrapped(self, *args, **kwargs):
         logging.debug("*** %s func args ***", f.__name__)
