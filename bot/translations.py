@@ -36,7 +36,7 @@ DefaultStrings = dict(
     SID_BROWSE_LOCAL_CHANNELS='Local',
     SID_CREATE_CHANNEL='Create Channel',
     SID_EDIT_CHANNEL='Edit Channel',
-    SID_LIST_MY_CHANNELS='List My Channels',
+    SID_MY_SUBSCRIPTIONS='My Subscriptions',
     SID_MY_CHANNELS_PROMPT='What do you want to do next?',
     SID_CHANNELS_HELP='Channels Help',
     SID_CHANNELS_PROMPT='What do you want to do next?',
@@ -62,6 +62,10 @@ DefaultStrings = dict(
     SID_DEL_CHANNEL_PROMPT='Are you sure?',
     SID_CHANNEL_REMOVED="Channel successfully removed",
     SID_CHANNEL_UNCHANGED="Channel remains unchanged",
+    SID_LIST_SUBSCRIPTIONS="List Subscriptions",
+    SID_ADD_SUBSCRIPTION="Subscribe",
+    SID_DEL_SUBSCRIPTION="Unsubscribe",
+    SID_SUBSCRIPTIONS_PROMPT='What do you want to do next?',
 )
 
 

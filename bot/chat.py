@@ -228,7 +228,7 @@ class MyChannelsChatState(BasicChatState):
     QREP_CTA = [
         CallToAction('SID_CREATE_CHANNEL', 'CreateChannelsChatState'),
         CallToAction('SID_EDIT_CHANNEL', 'EditChannelRootChatState'),
-        NoCallToAction('SID_LIST_MY_CHANNELS'),
+        CallToAction('SID_MY_SUBSCRIPTIONS', 'SubscriptionsRootChatState'),
     ]
     MSG_STR_ID = 'SID_MY_CHANNELS_PROMPT'
 
@@ -361,6 +361,16 @@ class DeleteChannelChatState(BasicChatState):
             return self.done('SID_CHANNEL_UHCNANGED')
 
         return self.reinstantiate()
+
+
+@step_collection.register
+class SubscriptionsRootChatState(BasicChatState):
+    QREP_CTA = [
+        NoCallToAction('SID_LIST_SUBSCRIPTIONS'),
+        NoCallToAction('SID_ADD_SUBSCRIPTION'),
+        NoCallToAction('SID_DEL_SUBSCRIPTION'),
+    ]
+    MSG_STR_ID = 'SID_SUBSCRIPTIONS_PROMPT'
 
 
 class BotChat(object):
