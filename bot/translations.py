@@ -70,6 +70,7 @@ DefaultStrings = dict(
     SID_ENTER_CHANNEL_ID_PROMPT="Enter desired Channel ID",
     SID_SELECT_SUB_PROMPT=('Please select a desired Subscription from list '
                            'or enter Channel ID'),
+    SID_NO_SUBS_PROMPT="You have no active subscriptions",
     SID_SELECT_SUB_ACTION_PROMPT='What do you want to do next?',
     SID_SUB_DELETE='Unsubscribe',
     SID_SUB_SHOW_ANNCS='Show Announcements',

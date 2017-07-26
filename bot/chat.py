@@ -376,6 +376,9 @@ class SubscriptionsRootChatState(BasicChatState):
 class SubsListChatState(BasicChatState):
     MSG_STR_ID = 'SID_SELECT_SUB_PROMPT'
     def _prepare_qreps(self):
+        if not len(self.user.subscriptions):
+            self.MSG_STR_ID = 'SID_NO_SUBS_PROMPT'
+            return None
         qreps = []
         for chid in self.user.subscriptions:
             c = Channel.by_chid(chid)
