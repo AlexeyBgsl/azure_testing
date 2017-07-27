@@ -110,7 +110,7 @@ class BasicChatState(ABC):
 
     def _send(self, sid, with_qreps=False):
         qreps = self._prepare_qreps() if with_qreps else None
-        message = self.get_message(sid)
+        message = str(BotString(sid, user=self.user, channel=self._channel))
         self.page.send(self.user.fbid, message, quick_replies=qreps)
 
     def _to_param(self):
@@ -132,14 +132,15 @@ class BasicChatState(ABC):
         self.user = user
         self.chid = chid
 
-    def get_message(self, sid=MSG_STR_ID):
-        return str(BotString(sid, user=self.user, channel=self._channel))
+    def _get_show_sid(self):
+        return self.MSG_STR_ID
 
     def show(self):
         if self.USER_INPUT:
             self._register_for_user_input()
-        if self.MSG_STR_ID:
-            self._send(self.MSG_STR_ID, with_qreps=True)
+        sid = self._get_show_sid()
+        if sid:
+            self._send(sid, with_qreps=True)
 
     def done(self, sid):
         self._send(sid=sid)
