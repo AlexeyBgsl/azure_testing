@@ -1,6 +1,7 @@
 from abc import ABC
 import logging
 import functools
+import re
 from google.cloud import datastore, exceptions
 from bot.config import CONFIG
 
@@ -194,6 +195,18 @@ class Channel(BasicEntry):
         e = cls.table.read(chid)
         if e:
             return cls(entity=e) if e else None
+
+    @staticmethod
+    def chid_from_str(str):
+        chid = re.sub(r"\s+", "", str, flags=re.UNICODE)
+        chid = re.sub(r"-", "", chid)
+        return chid if chid.isnumeric() else None
+
+
+    @classmethod
+    def by_chid_str(cls, str):
+        chid = cls.chid_from_str(str)
+        return cls.by_chid(chid) if chid else None
 
     def __init__(self, name=None, owner_uid=None, entity=None):
         super().__init__()

@@ -1,5 +1,4 @@
 import logging
-import re
 from abc import ABC
 from fbmq import QuickReply, Template
 from bot.translations import BotString
@@ -296,8 +295,7 @@ class EditChannelRootChatState(BasicChatState):
 
     def on_user_input(self, event):
         if event.is_text_message:
-            chid = re.sub(r"\s+", "", event.message_text, flags=re.UNICODE)
-            chid = re.sub(r"-", "", chid)
+            chid = Channel.chid_from_str(event.message_text)
             return self.on_selection(chid)
 
         return self.reinstantiate()
@@ -436,12 +434,10 @@ class SubAddChatState(BasicChatState):
 
     def on_user_input(self, event):
         if event.is_text_message:
-            chid = re.sub(r"\s+", "", event.message_text, flags=re.UNICODE)
-            chid = re.sub(r"-", "", chid)
-            c = Channel.by_chid(chid)
+            c = Channel.by_chid_str(event.message_text)
             if c:
-                res = subscribe(uid=self.user.oid, chid=chid)
-                self.chid = chid
+                res = subscribe(uid=self.user.oid, chid=c.chid)
+                self.chid = c.chid
                 return self.done('SID_SUB_ADDED' if res else 'SID_ERROR')
 
         return self.reinstantiate()
