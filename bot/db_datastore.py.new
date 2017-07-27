@@ -1,0 +1,250 @@
+from abc import ABC
+from google.cloud import datastore
+from bot.config import CONFIG
+
+
+# See https://googlecloudplatform.github.io/google-cloud-python/stable/datastore-client.html
+
+class BasicEntry(ABC):
+    @classmethod
+    def create(cls, table, data):
+        return cls(table, table.update(data))
+
+    @classmethod
+    def by_oid(cls, oid):
+        e = cls.table.read(oid)
+        if e:
+            return cls(entity=e) if e else None
+
+    def __add_db_property(self, name):
+        if not name in self.db_fields:
+            self.db_fields.append(name)
+
+    def add_db_field(self, name, val = None):
+        try:
+            setattr(self, name, val)
+        except AttributeError:
+            pass
+        self.__add_db_property(name)
+
+    def from_entity(self, e):
+        self.oid = e.key.id
+        for key in e:
+            if key != 'key':
+                self.add_db_field(key, e[key])
+
+    def __init__(self, table, entity=None):
+        """Constructor"""
+        self.table = table
+        self.oid = None
+        self.db_fields = []
+        if entity:
+            self.from_entity(entity)
+
+    def to_dict(self):
+        d = {}
+        for key in self.db_fields:
+            d[key] = getattr(self, key)
+        return d
+
+    def to_entity(self):
+        return self.table.get_entity(self.to_dict(), self.oid)
+
+    def save(self):
+        entity = self.table.update(self.to_dict(), self.oid)
+        self.oid = entity.key.id
+        return entity
+
+    def read(self):
+        entity = self.table.read(self.oid)
+        self.from_entity(entity)
+
+    def delete(self):
+        self.table.delete(self.oid)
+        self.oid = None
+
+
+class BasicTable(ABC):
+    client = DBClient()
+
+    def __init__(self, kind, exclude_from_indexes=()):
+        self.kind = kind
+        self.exclude = exclude_from_indexes
+
+    def _get_key(self, oid=None):
+        if oid:
+            return self.client.key(self.kind, int(oid))
+        return self.client.key(self.kind)
+
+    def get_entity(self, data, oid=None):
+        entity = datastore.Entity(key=self._get_key(oid),
+                                  exclude_from_indexes=self.exclude)
+        entity.update(data)
+        return entity
+
+    def update(self, data, oid=None):
+        entity = self.get_entity(data=data, oid=oid)
+        self.client.put(entity)
+        return entity
+
+    def read(self, oid):
+        return self.client.get(self._get_key(oid))
+
+    def delete(self, oid):
+        self.client.delete(self._get_key(oid))
+
+    def query(self):
+        return self.client.query(kind=self.kind)
+
+    def simple_query(self, **kwargs):
+        query = self.query()
+        for key in kwargs:
+            query.add_filter(key, '=', kwargs[key])
+        return list(query.fetch())
+
+
+class User(BasicEntry):
+    def __init__(self, table, entity):
+        super().__init__(table)
+        self.add_db_field('fbid', 0)
+        self.add_db_field('fbmsgseq', 0)
+        self.add_db_field('subscriptions', [])
+        if entity:
+            self.from_entity(entity)
+
+    def is_subscribed(self, chid):
+        return chid in self.subscription
+
+    def _subscribe(self, chid):
+        if chid not in self.subscriptions:
+            c = Channel.by_chid(chid)
+            self.subscriptions.append(chid)
+
+    def _unsubscribe(self, chid):
+        if chid in self.subscriptions:
+            self.subscriptions.remove(chid)
+
+
+class Users(BasicTable):
+    def __init__(self):
+        super().__init__(kind="Users")
+
+    def by_fbid(self, fbid):
+        results = self.simple_query(fbid=fbid)
+        if len(results) > 1:
+            raise ValueError("FB ID must be unique")
+        return User(self, entity=results[0]) if results else None
+
+
+class Channels(BasicTable):
+    def __init__(self):
+        super().__init__(kind="Channels", exclude_from_indexes=('desc',))
+
+
+class Channel(BasicEntry):
+    table = Channels()
+
+    @classmethod
+    def by_owner_uid(cls, owner_uid):
+        return cls.table.simple_query(owner_uid=owner_uid)
+
+    @classmethod
+    def by_chid(cls, chid):
+        e = cls.table.read(chid)
+        if e:
+            return cls(entity=e) if e else None
+
+    def __init__(self, name=None, owner_uid=None, entity=None):
+        super().__init__(self.table)
+        self.add_db_field('owner_uid', owner_uid)
+        self.add_db_field('name', name)
+        self.add_db_field('desc', '')
+        self.add_db_field('subscribers', [])
+        if entity:
+            self.from_entity(entity)
+
+    @property
+    def chid(self):
+        return self.oid
+
+    @property
+    def str_chid(self):
+        s = str(self.oid).ljust(16, '0')
+        return '{}-{}-{}-{}'.format(s[:4], s[4:8], s[8:12], s[12:16])
+
+    def _subscribe(self, uid):
+        if uid not in self.subscribers:
+            self.subscribers.append(uid)
+
+    def _unsubscribe(self, uid):
+        if uid in self.subscribers:
+            self.subscribers.remove(uid)
+
+
+class DBClient(datastore.Client):
+    def __init__(self):
+        super().__init__(CONFIG['PROJECT_ID'])
+
+    def subscribe(self, uid, chid):
+        eu = None
+        with self.transaction() as xact:
+            c = Channel.by_chid(chid)
+            u = User.(chid)
+            if not c:
+                raise ValueError("Channel {} doesn't exist".format(chid))
+            user._subscribe(chid)
+            c._subscribe(user.oid)
+            eu = user.to_entity()
+            xact.put(eu)
+            ec = c.to_entity()
+            xact.put(ec)
+        if eu:
+            user.oid = eu.entity.key.id
+
+
+    def unsubscribe(self, user, chid):
+        eu = None
+        with self.transaction() as xact:
+            c = Channel.by_chid(chid)
+            if not c:
+                raise ValueError("Channel {} doesn't exist".format(chid))
+            user._unsubscribe(chid)
+            c._unsubscribe(user.oid)
+            eu = user.to_entity()
+            xact.put(eu)
+            ec = c.to_entity()
+            xact.put(ec)
+        if eu:
+            user.oid = eu.entity.key.id
+
+
+class Anncs(BasicTable):
+    def __init__(self):
+        super().__init__(kind="Announcements", exclude_from_indexes=('text',))
+
+
+class Annc(BasicEntry):
+    table = Anncs()
+
+    @classmethod
+    def by_owner_uid(cls, owner_uid):
+        return cls.table.simple_query(owner_uid=owner_uid)
+
+    @classmethod
+    def by_chid(cls, chid):
+        e = cls.table.read(chid)
+        if e:
+            return cls(entity=e) if e else None
+
+    def __init__(self, title=None, chid=None, owner_uid=None, entity=None):
+        super().__init__(self.table)
+        self.add_db_field('title', title)
+        self.add_db_field('chid', chid)
+        self.add_db_field('owner_uid', owner_uid)
+        self.add_db_field('text', '')
+        if entity:
+            self.from_entity(entity)
+
+    @property
+    def aid(self):
+        return self.oid

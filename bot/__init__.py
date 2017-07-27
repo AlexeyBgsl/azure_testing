@@ -4,8 +4,9 @@ Locano Facebook bot implementation
 import logging
 from flask import Flask
 from bot.webhook import botbp
-from bot.config import CONFIG
+from bot.config import CONFIG, set_env
 from bot.translations import String, default_strings_to_db
+from bot.page import create_page
 
 BOT_ROOT = '/bot'
 
@@ -26,6 +27,10 @@ def create_app(config):
     config_logger(app)
 
     logging.info("Registering App: %s", __name__)
+
+    set_env(is_production=config.APP_ENV_GAE)
+
+    create_page()
 
     # Register the Bot blueprint.
     app.register_blueprint(botbp, url_prefix=BOT_ROOT)

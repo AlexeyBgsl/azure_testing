@@ -2,13 +2,25 @@
 Application configuration
 """
 
-# noinspection PyPep8
-CONFIG = {
-    'LOGFMT': '[%(asctime)s] [%(name)s] [%(levelname)s] %(message)s',
-    'ACCESS_TOKEN': 'EAAUEkHk0iswBAMq2jCxGo9BxX5z5wdo74oUF64ZC0Lim6rP6BAOgCwwDoJ2wtYBD7Vrw6ZBfUgweLacbgwv8zUJa6agoOb8aSnyLzA6GkZAYVY5dprNt0QXfZA0GjKOZBGBZBGmz4OnSOmWboNbrwZBg79kpmY5MPmgPw1RMVfT40D8xdu5FZBmt',
-    'VERIFY_TOKEN': 'loc@no',
-    'PROJECT_ID': 'locano-172715'
-}
+ACCESS_TOKEN_PRD = ('EAAUEkHk0iswBAIg6ZCMx7cAGysgWohTJq1rWN4GgAGm21Cnc72HHjrZB'
+                    'jsIbLV8SoYwvux2j9ONAVyU9evSGzrQa03RZCigzsU47l2WfLqZBiP5w8'
+                    '5Ak4ZAdYTMwVQmMnZBT8XQjVYuF0lk21JSiUwtP3PBNV5F3gTmtItzedh'
+                    'cqFj4bnP5nR2')
+ACCESS_TOKEN_DBG = ('EAATBF61P4qoBAOxtLJqx75i2e04c2CUCpfTCiOTaJCuZA81ZAVf33icr'
+                    'xfElOXm50aBTlcTGtFnuyr5lZAPrV382eGCVZB58pb4AoSohRmyyV5qyw'
+                    'XOsDBpM8HgE3ZCfN9rv7spE9ZCfqIDnj2tM9Tb5ZAm9fb3l296ZAJQgIn'
+                    'QlO2ltaF4uAwqQ')
+CONFIG = dict(
+    LOGFMT='[%(asctime)s] [%(name)s] [%(levelname)s] %(message)s',
+    ACCESS_TOKEN='',
+    VERIFY_TOKEN='loc@no',
+    PROJECT_ID='locano-172715'
+)
+
+
+def set_env(is_production):
+    CONFIG['ACCESS_TOKEN'] =\
+        ACCESS_TOKEN_PRD if is_production else ACCESS_TOKEN_DBG
 
 
 def is_correct_token(token):

@@ -3,7 +3,9 @@ App Configuration
 """
 import os
 
-if os.getenv('SERVER_SOFTWARE', '').startswith('Google App Engine/'):
+APP_ENV_GAE = (os.getenv('APP_ENV_GAE', '') == '1')
+
+if APP_ENV_GAE:
     # Production
     DEBUG = False
     TESTING = False

@@ -23,3 +23,5 @@ entrypoint: gunicorn -b :$PORT main:app
 runtime_config:
   python_version: 3
 
+env_variables:
+  APP_ENV_GAE: '1'

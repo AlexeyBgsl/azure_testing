@@ -90,6 +90,8 @@ class MsgHandler(BasicEntry):
 
 
 class BotPage(fbmq.Page):
+    singleton = None
+
     def __init__(self):
         super().__init__(CONFIG['ACCESS_TOKEN'])
         self.greeting(str(BotString('SID_GREETING')))
@@ -197,53 +199,60 @@ class BotPage(fbmq.Page):
                       payload.message.text)
 
 
-page = BotPage()
+def get_page():
+    return BotPage.singleton
 
 
-@page.callback([BotChatClbTypes['ClbMenu'] + '/(.+)'])
-def menu_handler(payload, event):
-    page.on_chat_menu(page, payload, event)
+def create_page():
+    page = BotPage()
+
+    @page.callback([BotChatClbTypes['ClbMenu'] + '/(.+)'])
+    def menu_handler(payload, event):
+        page.on_chat_menu(page, payload, event)
 
 
-@page.handle_message
-def message_handler(event):
-    page.on_message(event)
+    @page.handle_message
+    def message_handler(event):
+        page.on_message(event)
 
 
-@page.handle_echo
-def echo_handler(event):
-    page.on_echo(event)
+    @page.handle_echo
+    def echo_handler(event):
+        page.on_echo(event)
 
 
-@page.handle_delivery
-def delivery_handler(event):
-    page.on_delivery(event)
+    @page.handle_delivery
+    def delivery_handler(event):
+        page.on_delivery(event)
 
 
-@page.handle_optin
-def optin_handler(event):
-    page.on_optin(event)
+    @page.handle_optin
+    def optin_handler(event):
+        page.on_optin(event)
 
 
-@page.handle_read
-def read_handler(event):
-    page.on_read(event)
+    @page.handle_read
+    def read_handler(event):
+        page.on_read(event)
 
 
-@page.handle_account_linking
-def postback_account_linking(event):
-    page.on_account_linking(event)
+    @page.handle_account_linking
+    def postback_account_linking(event):
+        page.on_account_linking(event)
 
 
-@page.after_send
-def after_send(payload, response):
-    page.on_after_send(payload, response)
+    @page.after_send
+    def after_send(payload, response):
+        page.on_after_send(payload, response)
 
 
-@page.callback([BotChatClbTypes['ClbQRep'] + '/(.+)'])
-def chat_callback_handler(payload, event):
-    page.on_chat_callback(page, payload, event)
+    @page.callback([BotChatClbTypes['ClbQRep'] + '/(.+)'])
+    def chat_callback_handler(payload, event):
+        page.on_chat_callback(page, payload, event)
 
-@page.callback([START_PAYLOAD])
-def start_callback(payload, event):
-    page.on_start(event)
+    @page.callback([START_PAYLOAD])
+    def start_callback(payload, event):
+        page.on_start(event)
+
+    BotPage.singleton = page
+    return page

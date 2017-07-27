@@ -3,7 +3,7 @@ import logging
 from flask import Blueprint, request
 
 from bot.config import is_correct_token
-from bot.page import page
+from bot.page import get_page
 
 botbp = Blueprint('botbp', __name__)
 
@@ -23,5 +23,5 @@ def verify():
 def handle_messages():
     """ FB Webhook handler """
     logging.info("Handling webhook")
-    page.handle_webhook(request.get_data(as_text=True))
+    get_page().handle_webhook(request.get_data(as_text=True))
     return "ok"
