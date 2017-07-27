@@ -91,6 +91,10 @@ class BasicChatState(ABC):
     def class_name(cls):
         return cls.__name__
 
+    def payload(self, type, action_id):
+        p = Payload(type, self.class_name(), action_id, param=self._to_param())
+        return str(p)
+
     @property
     def _channel(self):
         return Channel.by_chid(self.chid) if self.chid else None
@@ -100,9 +104,8 @@ class BasicChatState(ABC):
             return None
         qreps = []
         for cta in self.QREP_CTA:
-            p = Payload('ClbQRep', self.class_name(), cta.action_id,
-                        param=self.chid)
-            qreps.append(QuickReply(cta.title(self.user), str(p)))
+            p = self.payload('ClbQRep', cta.action_id)
+            qreps.append(QuickReply(cta.title(self.user), p))
         return qreps
 
     def _send(self, sid, with_qreps=False):
@@ -110,9 +113,19 @@ class BasicChatState(ABC):
         message = self.get_message(sid)
         self.page.send(self.user.fbid, message, quick_replies=qreps)
 
+    def _to_param(self):
+        if self.chid:
+            return 'C' + self.chid
+        return None
+
+    def _from_param(self, param):
+        if param:
+            if param[0] == 'C':
+                self.chid = param[1:]
+
     def _register_for_user_input(self):
-        p = Payload('ClbMsg', self.class_name(), 'UsrInput', param=self.chid)
-        self.page.register_for_message(self.user, str(p))
+        p = self.payload('ClbMsg', 'UsrInput')
+        self.page.register_for_message(self.user, p)
 
     def __init__(self, page, user, chid=None):
         self.page = page
@@ -148,7 +161,7 @@ class BasicChatState(ABC):
         return None
 
     def on_action(self, type, action_id, param, event):
-        self.chid = param
+        self._from_param(param)
         logging.debug("%s: on_action(%s): %s arrived",
                       self.class_name(), type, action_id)
         if type == 'ClbQRep':
@@ -286,8 +299,8 @@ class EditChannelRootChatState(BasicChatState):
         qreps = []
         for e in ch_list:
             c = Channel(entity=e)
-            p = Payload('ClbQRep', self.class_name(), str(c.oid))
-            qreps.append(QuickReply(c.name, str(p)))
+            p = self.payload('ClbQRep', str(c.oid))
+            qreps.append(QuickReply(c.name, p))
         return qreps
 
     def on_quick_response(self, action_id, event):
@@ -375,9 +388,8 @@ class RootSubscriptionsChatState(BasicChatState):
         for cta in self.QREP_CTA:
             if not has_subs and cta.class_name == 'SubsListChatState':
                 continue
-            p = Payload('ClbQRep', self.class_name(), cta.action_id,
-                        param=self.chid)
-            qreps.append(QuickReply(cta.title(self.user), str(p)))
+            p = self.payload('ClbQRep', cta.action_id)
+            qreps.append(QuickReply(cta.title(self.user), p))
         return qreps
 
 
@@ -391,8 +403,8 @@ class SubsListChatState(BasicChatState):
             qreps = []
             for chid in self.user.subscriptions:
                 c = Channel.by_chid(chid)
-                p = Payload('ClbQRep', self.class_name(), str(c.oid))
-                qreps.append(QuickReply(c.name, str(p)))
+                p = self.payload('ClbQRep', str(c.oid))
+                qreps.append(QuickReply(c.name, p))
         return qreps
 
     def on_quick_response(self, action_id, event):
