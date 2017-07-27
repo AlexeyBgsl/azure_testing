@@ -17,6 +17,7 @@ DefaultStrings = dict(
     SID_GREETING='Hi {{user_first_name}}, welcome to Locano Chatbot',
     SID_DONT_UNDERSTAND='Sorry, I don\'t understand you',
     SID_MENU_CHANNELS='Channels',
+    SID_MENU_SUBSCRIPTIONS='Subscriptions',
     SID_MENU_ANNOUNCEMENTS='Make an Announcement',
     SID_MENU_HELP='How To',
     SID_DBG_NO_ACTION='[DBG] Not Implemented Yet',

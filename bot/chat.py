@@ -177,6 +177,7 @@ class RootChatState(BasicChatState):
     QREP_CTA = [
         CallToAction('SID_BROWSE_CHANNELS', 'BrowseChannelsChatState'),
         CallToAction('SID_MY_CHANNELS', 'MyChannelsChatState'),
+        CallToAction('SID_MY_SUBSCRIPTIONS', 'RootSubscriptionsChatState'),
         NoCallToAction('SID_MAKE_ANNOUNCEMENT'),
     ]
     MSG_STR_ID = 'SID_ROOT_PROMPT'
@@ -228,7 +229,6 @@ class MyChannelsChatState(BasicChatState):
     QREP_CTA = [
         CallToAction('SID_CREATE_CHANNEL', 'CreateChannelsChatState'),
         CallToAction('SID_EDIT_CHANNEL', 'EditChannelRootChatState'),
-        CallToAction('SID_MY_SUBSCRIPTIONS', 'SubscriptionsRootChatState'),
     ]
     MSG_STR_ID = 'SID_MY_CHANNELS_PROMPT'
 
@@ -364,7 +364,7 @@ class DeleteChannelChatState(BasicChatState):
 
 
 @step_collection.register
-class SubscriptionsRootChatState(BasicChatState):
+class RootSubscriptionsChatState(BasicChatState):
     QREP_CTA = [
         CallToAction('SID_LIST_SUBSCRIPTIONS', 'SubsListChatState'),
         CallToAction('SID_ADD_SUBSCRIPTION', 'SubAddChatState'),
@@ -451,6 +451,7 @@ class BotChat(object):
     MENU_CTA = [
         NoCallToAction('SID_MENU_ANNOUNCEMENTS'),
         CallToAction('SID_MENU_CHANNELS', 'RootChannelsChatState'),
+        CallToAction('SID_MENU_SUBSCRIPTIONS', 'RootSubscriptionsChatState'),
         CallToAction('SID_MENU_HELP', 'RootHelpChatState'),
     ]
 
