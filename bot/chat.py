@@ -109,7 +109,12 @@ class BasicChatState(ABC):
         return qreps
 
     def _send(self, sid, with_qreps=False):
-        qreps = self._prepare_qreps() if with_qreps else None
+        qreps = None
+        if with_qreps:
+            qreps = self._prepare_qreps()
+            if qreps and not len(qreps):
+                logging.warning("%s: empty QREPS generated", self.class_name())
+                qreps = None
         message = str(BotString(sid, user=self.user, channel=self._channel))
         self.page.send(self.user.fbid, message, quick_replies=qreps)
 
