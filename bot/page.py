@@ -154,7 +154,7 @@ class BotPage(fbmq.Page):
         else:
             h = MsgHandler.get_by_fbid(sender_id)
             if h:
-                chat_msg_handler(user, page, h.payload, event)
+                chat_msg_handler(user, get_page(), h.payload, event)
             elif event.is_text_message:
                 message = event.message_text
                 logging.debug("[U#%s] [on_message] %s", sender_id, message)
