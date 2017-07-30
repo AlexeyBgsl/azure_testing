@@ -190,12 +190,15 @@ class BotString(String):
     SUB_USER_LAST_NAME='USER_LAST_NAME'
     SUB_CHANNEL_NAME='CHANNEL_NAME'
     SUB_CHANNEL_ID='CHANNEL_ID'
+    SUB_ANNC_TITLE='ANNC_TITLE'
+    SUB_ANNC_TEXT='ANNC_TEXT'
 
-    def __init__(self, sid, locale=None, user=None, channel=None):
+    def __init__(self, sid, locale=None, user=None, channel=None, annc=None):
         super().__init__(sid)
         self.locale = locale
         self.user = user
         self.channel = channel
+        self.annc = annc
 
     def __str__(self):
         d = {}
@@ -205,4 +208,7 @@ class BotString(String):
         if self.channel:
             d[self.SUB_CHANNEL_NAME] = self.channel.name
             d[self.SUB_CHANNEL_ID] = self.channel.str_chid
+        if self.annc:
+            d[self.SUB_ANNC_TITLE] = self.annc.title
+            d[self.SUB_ANNC_TEXT] = self.annc.text
         return Template(self.get_safe(self.locale)).safe_substitute(d)
