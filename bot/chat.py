@@ -3,6 +3,7 @@ from abc import ABC
 from fbmq import QuickReply, Template
 from bot.translations import BotString
 from bot.db_datastore import Channel, Annc, subscribe, unsubscribe
+from bot.horn import Horn
 
 
 BotChatClbTypes = dict(
@@ -553,6 +554,7 @@ class AnncGetTextChatState(BasicChatState):
             a = self._announcement
             a.text = event.message_text.strip()
             a.save()
+            Horn(self.page).notify(a)
             return self.done('SID_ANNC_DONE')
 
         return self.reinstantiate()

@@ -86,6 +86,10 @@ DefaultStrings = dict(
     SID_ANNC_CREATE_CHANNEL_PROMPT="Please create a channel first",
     SID_ANNC_NEW_CHANNEL="New Channel",
     SID_ANNC_SELECT_CHANNEL="Select Channel",
+    SID_ANNC_MESSAGE=("== Announcement Notification ==\n"
+                      "Channel: $CHANNEL_NAME ($CHANNEL_ID)\n"\
+                      "Title: $ANNC_TITLE\n\n"
+                      "$ANNC_TEXT\n"),
 
 )
 
