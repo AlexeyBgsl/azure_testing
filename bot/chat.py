@@ -391,8 +391,12 @@ class DeleteChannelChatState(BasicChatState):
     def on_quick_response(self, action_id, event):
         if action_id == 'YesPseudoChatState':
             c = self._channel
-            c.delete()
-            return self.done('SID_CHANNEL_REMOVED')
+            if c:
+                c.delete()
+                return self.done('SID_CHANNEL_REMOVED')
+            else:
+                logging.warning("[U#%s] cannot remove nonexistent channel %s",
+                                event.sender_id, self.chid)
 
         if  action_id == 'NoPseudoChatState':
             return self.done('SID_CHANNEL_UNCHANGED')
@@ -429,8 +433,13 @@ class SubsListChatState(BasicChatState):
             qreps = []
             for chid in self.user.subscriptions:
                 c = Channel.by_chid(chid)
-                p = self.payload('ClbQRep', str(c.oid))
-                qreps.append(QuickReply(c.name, p))
+                if c:
+                    p = self.payload('ClbQRep', str(c.oid))
+                    qreps.append(QuickReply(c.name, p))
+                else:
+                    logging.warning(
+                        "[U#%s] cannot remove nonexistent channel %s",
+                        self.user.oid, chid)
         return qreps
 
     def on_quick_response(self, action_id, event):
