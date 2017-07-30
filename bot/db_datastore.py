@@ -154,11 +154,6 @@ class User(BasicEntry):
         e = cls.table.by_fbid(fbid)
         return cls(e) if e else None
 
-    @classmethod
-    def by_oid(cls, oid):
-        e = cls.entity_by_oid(oid)
-        return cls(e) if e else None
-
     def __init__(self, entity):
         super().__init__()
         self.add_db_field('fbid', 0)
