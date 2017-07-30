@@ -2,7 +2,7 @@ import logging
 from abc import ABC
 from fbmq import QuickReply, Template
 from bot.translations import BotString
-from bot.db_datastore import Channel, subscribe, unsubscribe
+from bot.db_datastore import Channel, Annc, subscribe, unsubscribe
 
 
 BotChatClbTypes = dict(
@@ -99,6 +99,11 @@ class BasicChatState(ABC):
     def _channel(self):
         return Channel.by_chid(self.chid) if self.chid else None
 
+    @property
+    def _announcement(self):
+        return Annc.by_oid(self.aid) if self.aid else None
+
+
     def _prepare_qreps(self):
         if not self.QREP_CTA:
             return None
@@ -119,23 +124,33 @@ class BasicChatState(ABC):
         self.page.send(self.user.fbid, message, quick_replies=qreps)
 
     def _to_param(self):
+        if self.aid:
+            return 'A' + self.aid
         if self.chid:
             return 'C' + self.chid
         return None
 
     def _from_param(self, param):
         if param:
-            if param[0] == 'C':
+            if param[0] == 'A':
+                self.aid = param[1:]
+                self.chid = self._announcement.chid
+            elif param[0] == 'C':
                 self.chid = param[1:]
 
     def _register_for_user_input(self):
         p = self.payload('ClbMsg', 'UsrInput')
         self.page.register_for_message(self.user, p)
 
-    def __init__(self, page, user, chid=None):
+    def __init__(self, page, user, chid=None, aid=None):
         self.page = page
         self.user = user
-        self.chid = chid
+        if aid:
+            self.aid = aid
+            self.chid = self._announcement.chid
+        else:
+            self.aid = None
+            self.chid = chid
 
     def _get_show_sid(self):
         return self.MSG_STR_ID
@@ -196,7 +211,7 @@ class RootChatState(BasicChatState):
         CallToAction('SID_BROWSE_CHANNELS', 'BrowseChannelsChatState'),
         CallToAction('SID_MY_CHANNELS', 'MyChannelsChatState'),
         CallToAction('SID_MY_SUBSCRIPTIONS', 'RootSubscriptionsChatState'),
-        NoCallToAction('SID_MAKE_ANNOUNCEMENT'),
+        CallToAction('SID_MAKE_ANNOUNCEMENT', 'MakeAnncChatState'),
     ]
     MSG_STR_ID = 'SID_ROOT_PROMPT'
 
@@ -466,9 +481,77 @@ class SubAddChatState(BasicChatState):
         return self.reinstantiate()
 
 
+@step_collection.register
+class MakeAnncChatState(BasicChatState):
+    MSG_STR_ID = 'SID_ANNC_ROOT_PROMPT'
+    QREP_CTA = [
+        CallToAction('SID_ANNC_NEW_CHANNEL', 'CreateChannelsChatState'),
+        CallToAction('SID_ANNC_SELECT_CHANNEL', 'AnncSelectChannelChatState'),
+    ]
+
+    def _prepare_qreps(self):
+        qreps = []
+        for cta in self.QREP_CTA:
+            if (not self.has_channels and
+                        cta.class_name == 'AnncSelectChannelChatState'):
+                continue
+            p = self.payload('ClbQRep', cta.action_id)
+            qreps.append(QuickReply(cta.title(self.user), p))
+        return qreps
+
+    def _get_show_sid(self):
+        if self.has_channels:
+            return 'SID_ANNC_ROOT_PROMPT'
+        return 'SID_ANNC_CREATE_CHANNEL_PROMPT'
+
+    def show(self):
+        self.has_channels = (len(Channel.by_owner_uid(self.user.oid)) != 0)
+        super().show()
+
+
+@step_collection.register
+class AnncSelectChannelChatState(SelectChannelChatState):
+    NEXT_CLS_NAME = 'AnncGetTitleChatState'
+
+
+@step_collection.register
+class AnncGetTitleChatState(BasicChatState):
+    MSG_STR_ID = 'SID_ANNC_GET_TITLE_PROMPT'
+    USER_INPUT = True
+
+    def create_annc(self, title):
+        a = Annc(title=title, chid=self.chid, owner_uid=self.user.oid)
+        a.save()
+        return a
+
+    def on_user_input(self, event):
+        if event.is_text_message:
+            logging.debug("[U#%s] Desired annc title is: %s",
+                          event.sender_id, event.message_text)
+            a = self.create_annc(event.message_text)
+            return HandlerResult('AnncGetTextChatState', aid=str(a.oid))
+
+        return self.reinstantiate()
+
+
+@step_collection.register
+class AnncGetTextChatState(BasicChatState):
+    MSG_STR_ID = 'SID_ANNC_GET_TEXT_PROMPT'
+    USER_INPUT = True
+
+    def on_user_input(self, event):
+        if event.is_text_message:
+            a = self._announcement
+            a.text = event.message_text.strip()
+            a.save()
+            return self.done('SID_ANNC_DONE')
+
+        return self.reinstantiate()
+
+
 class BotChat(object):
     MENU_CTA = [
-        NoCallToAction('SID_MENU_ANNOUNCEMENTS'),
+        CallToAction('SID_MENU_ANNOUNCEMENTS', 'MakeAnncChatState'),
         CallToAction('SID_MENU_CHANNELS', 'RootChannelsChatState'),
         CallToAction('SID_MENU_SUBSCRIPTIONS', 'RootSubscriptionsChatState'),
         CallToAction('SID_MENU_HELP', 'RootHelpChatState'),

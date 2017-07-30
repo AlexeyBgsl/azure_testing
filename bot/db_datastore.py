@@ -35,6 +35,11 @@ class BasicEntry(ABC):
     def entity_by_oid(cls, oid):
         return cls.table.read(oid)
 
+    @classmethod
+    def by_oid(cls, oid):
+        e = cls.entity_by_oid(oid)
+        return cls(entity = e) if e else None
+
     def __add_db_property(self, name):
         if not name in self.db_fields:
             self.db_fields.append(name)
@@ -52,10 +57,12 @@ class BasicEntry(ABC):
             if key != 'key':
                 self.add_db_field(key, e[key])
 
-    def __init__(self):
+    def __init__(self, entity=None):
         assert self.table
         self.oid = None
         self.db_fields = []
+        if entity:
+            self.from_entity(entity)
 
     def to_dict(self):
         d = {}
@@ -273,3 +280,30 @@ def unsubscribe(uid, chid):
             c = Channel(entity=ce)
             if c._unsubscribe(uid):
                 t.put(c.to_entity())
+
+
+class Anncs(BasicTable):
+    def __init__(self):
+        super().__init__(kind="Announcements",
+                         exclude_from_indexes=('desc', 'title', ))
+
+
+class Annc(BasicEntry):
+    table = Anncs()
+
+    @classmethod
+    def by_owner_uid(cls, owner_uid):
+        return cls.table.simple_query(owner_uid=owner_uid)
+
+    @classmethod
+    def by_chid(self, chid):
+        return self.table.simple_query(chid=chid)
+
+    def __init__(self, title=None, chid=None, owner_uid=None, entity=None):
+        super().__init__()
+        self.add_db_field('title', title)
+        self.add_db_field('chid', chid)
+        self.add_db_field('owner_uid', owner_uid)
+        self.add_db_field('desc', '')
+        if entity:
+            self.from_entity(entity)
