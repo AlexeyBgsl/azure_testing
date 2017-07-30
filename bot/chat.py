@@ -289,15 +289,15 @@ class GetChannelDescChatState(BasicChatState):
         return self.reinstantiate()
 
 
-@step_collection.register
-class EditChannelRootChatState(BasicChatState):
+class SelectChannelChatState(BasicChatState):
     MSG_STR_ID = 'SID_SELECT_CHANNEL_PROMPT'
     USER_INPUT = True
+    NEXT_CLS_NAME = None
 
     def on_selection(self, chid):
         c = Channel.by_chid(chid)
         if c:
-            return HandlerResult('EditChannelTypeChatState', chid=chid)
+            return HandlerResult(self.NEXT_CLS_NAME, chid=chid)
         return HandlerResult(self.class_name())
 
     def _prepare_qreps(self):
@@ -318,6 +318,11 @@ class EditChannelRootChatState(BasicChatState):
             return self.on_selection(chid)
 
         return self.reinstantiate()
+
+
+@step_collection.register
+class EditChannelRootChatState(SelectChannelChatState):
+    NEXT_CLS_NAME = 'EditChannelTypeChatState'
 
 
 @step_collection.register
