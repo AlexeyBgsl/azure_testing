@@ -25,3 +25,7 @@ runtime_config:
 
 env_variables:
   APP_ENV_GAE: '1'
+
+manual_scaling:
+  instances: 1
+
