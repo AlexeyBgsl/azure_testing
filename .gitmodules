@@ -1,3 +1,3 @@
 [submodule "db"]
 	path = db
-	url = git@github.com:anton-nayshtut/locanorss.git
+	url = git@github.com:anton-nayshtut/locanodb.git
