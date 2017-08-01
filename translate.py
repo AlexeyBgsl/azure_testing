@@ -1,7 +1,7 @@
 import argparse
 import glob
 import os
-from bot import String, default_strings_to_db
+from bot import BotString
 
 
 def print_string(s, verbose=False):
@@ -45,7 +45,7 @@ def sids_by_code():
 def check_code(verbose):
     sids = sids_by_code()
     for sid in sids:
-        s = String(sid)
+        s = BotString(sid)
         print_string(s, verbose=verbose)
 
 
@@ -72,21 +72,20 @@ if args.command == 'list_db':
         print_string(s, verbose=verbose)
 elif args.command == 'list_ids':
     print('Following String IDs exist:')
-    for sid in String.all_defaults():
-        s = String(sid)
+    for sid in BotString.all_defaults():
+        s = BotString(sid)
         print_string(s, verbose=verbose)
 elif args.command == 'check':
     check_code(verbose)
 elif args.command == 'fill':
-    default_strings_to_db(override=True if args.force else False)
+    BotString.default_strings_to_db(override=True if args.force else False)
 else:
     if not args.sid:
         raise ValueError("Please specify String ID")
 
-    s = String(args.sid)
+    s = BotString(args.sid)
 
     if args.command == 'show':
-        s = String(args.sid)
         print_string(s, verbose=verbose)
     elif args.command == 'set':
         if not args.lang:

@@ -5,7 +5,7 @@ import logging
 from flask import Flask
 from bot.webhook import botbp
 from bot.config import CONFIG, set_env
-from bot.translations import String, default_strings_to_db
+from bot.translations import BotString
 from bot.page import create_page
 
 BOT_ROOT = '/bot'

@@ -1,5 +1,5 @@
 import logging
-from bot.db_datastore import User, Channel
+from db import User, Channel
 from bot.translations import BotString
 
 

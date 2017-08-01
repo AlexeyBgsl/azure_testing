@@ -2,7 +2,7 @@ import logging
 from abc import ABC
 from fbmq import QuickReply, Template
 from bot.translations import BotString
-from bot.db_datastore import Channel, Annc, subscribe, unsubscribe
+from db import Channel, Annc
 from bot.horn import Horn
 
 
@@ -466,7 +466,7 @@ class SubDelChatState(BasicChatState):
 
     def on_quick_response(self, action_id, event):
         if action_id == 'YesPseudoChatState':
-            unsubscribe(uid=self.user.oid, chid=self.chid)
+            self.user.unsubscribe(self.chid)
             return self.done('SID_SUB_REMOVED')
 
         if  action_id == 'NoPseudoChatState':
@@ -484,7 +484,7 @@ class SubAddChatState(BasicChatState):
         if event.is_text_message:
             c = Channel.by_chid_str(event.message_text)
             if c:
-                res = subscribe(uid=self.user.oid, chid=c.chid)
+                res = self.user.subscribe(chid=c.chid)
                 self.chid = c.chid
                 return self.done('SID_SUB_ADDED' if res else 'SID_ERROR')
 

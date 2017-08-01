@@ -2,7 +2,7 @@ import logging
 import fbmq
 import functools
 from bot.config import CONFIG
-from bot.db_datastore import User, BasicTable, BasicEntry
+from db import User, MsgHandler
 from bot.chat import (
     BotChatClbTypes,
     chat_clb_handler,
@@ -45,48 +45,6 @@ def null_decorator(f):
 
 
 dump_member_func = dump_mfunc if DUMP_ALL else null_decorator
-
-
-class MsgHandlers(BasicTable):
-    def __init__(self):
-        super().__init__(kind="Handlers")
-
-    def by_fbid(self, fbid):
-        results = self.simple_query(fbid=fbid)
-        if len(results) > 1:
-            raise ValueError("FB ID must be unique")
-        return results[0] if results else None
-
-
-class MsgHandler(BasicEntry):
-    table = MsgHandlers()
-
-    @classmethod
-    def get_by_fbid(cls, fbid, auto_remove=True):
-        e = cls.table.by_fbid(fbid)
-        if e:
-            if auto_remove:
-                cls.table.delete(e.key.id)
-            return cls(entity=e)
-        return None
-
-    @classmethod
-    def create_or_update(cls, fbid, payload, auto_save=True):
-        e = cls.table.by_fbid(fbid)
-        h = cls(entity=e)
-        h.set(fbid=fbid, payload=payload)
-        if auto_save:
-            h.save()
-        return h
-
-    def __init__(self, entity=None):
-        super().__init__()
-        if entity:
-            self.from_entity(entity)
-
-    def set(self, fbid, payload):
-        self.add_db_field('fbid', fbid)
-        self.add_db_field('payload', payload)
 
 
 class BotPage(fbmq.Page):
