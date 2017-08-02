@@ -1,4 +1,3 @@
-Flask==0.12.2
-gunicorn==19.7.1
+Flask
 -e git+https://github.com/anton-nayshtut/fbmq.git#egg=fbmq
-google-cloud==0.26.0
+google-cloud
