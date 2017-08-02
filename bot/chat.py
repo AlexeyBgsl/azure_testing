@@ -561,7 +561,7 @@ class AnncGetTextChatState(BasicChatState):
 
 class BotRef(object):
     PARAMS_DELIMITER = ';'
-    KEYVAL_DELIMITER = '='
+    KEYVAL_DELIMITER = ':'
 
     @classmethod
     def get_ref(cls, **kwargs):
