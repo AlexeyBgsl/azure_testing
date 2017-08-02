@@ -168,31 +168,25 @@ def create_page():
     def menu_handler(payload, event):
         page.on_chat_menu(page, payload, event)
 
-
     @page.handle_message
     def message_handler(event):
         page.on_message(event)
-
 
     @page.handle_echo
     def echo_handler(event):
         page.on_echo(event)
 
-
     @page.handle_delivery
     def delivery_handler(event):
         page.on_delivery(event)
-
 
     @page.handle_optin
     def optin_handler(event):
         page.on_optin(event)
 
-
     @page.handle_read
     def read_handler(event):
         page.on_read(event)
-
 
     @page.handle_account_linking
     def postback_account_linking(event):
@@ -202,7 +196,6 @@ def create_page():
     @page.after_send
     def after_send(payload, response):
         page.on_after_send(payload, response)
-
 
     @page.callback([BotChatClbTypes['ClbQRep'] + '/(.+)'])
     def chat_callback_handler(payload, event):
