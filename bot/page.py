@@ -151,6 +151,16 @@ class BotPage(fbmq.Page):
                       event.message_text)
 
     @dump_member_func
+    def on_referral(self, event):
+        sender_id = event.sender_id
+        user = self.create_or_update_user(sender_id)
+        if not user:
+            logging.error("[U#%s] [on_message] cannot get user",
+                          sender_id)
+        else:
+            return BotChat(self, user).on_refferal(event)
+
+    @dump_member_func
     def on_after_send(self, payload, response):
         logging.debug("[U#%s] [on_after_send] %s",
                       payload.recipient.id,
@@ -192,6 +202,9 @@ def create_page():
     def postback_account_linking(event):
         page.on_account_linking(event)
 
+    @page.handle_referral
+    def referral_callback(event):
+        page.on_referral(event)
 
     @page.after_send
     def after_send(payload, response):

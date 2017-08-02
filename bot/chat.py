@@ -104,7 +104,6 @@ class BasicChatState(ABC):
     def _announcement(self):
         return Annc.by_oid(self.aid) if self.aid else None
 
-
     def _prepare_qreps(self):
         if not self.QREP_CTA:
             return None
@@ -560,6 +559,43 @@ class AnncGetTextChatState(BasicChatState):
         return self.reinstantiate()
 
 
+class BotRef(object):
+    PARAMS_DELIMITER = ';'
+    KEYVAL_DELIMITER = '='
+
+    @classmethod
+    def get_ref(cls, **kwargs):
+        ref = ''
+        for k in kwargs:
+            if ref != '':
+                ref += cls.PARAMS_DELIMITER
+            ref += k + cls.PARAMS_DELIMITER + kwargs[k]
+        return ref
+
+    @classmethod
+    def get_params(self, ref):
+        d = {}
+        params = ref.split(self.PARAMS_DELIMITER)
+        for p in params:
+            v = p.split(self.KEYVAL_DELIMITER)
+            if v and len(v) == 2:
+                d[v[0]] = v[1]
+        return d
+
+    def __init__(self, ref=None):
+        self.params = self.get_params(ref) if ref else {}
+
+    def add_params(self, params):
+        self.params.update(params)
+
+    @property
+    def ref(self):
+        return self.get_ref(self.params)
+
+    def __str__(self):
+        return self.ref
+
+
 class BotChat(object):
     MENU_CTA = [
         CallToAction('SID_MENU_ANNOUNCEMENTS', 'MakeAnncChatState'),
@@ -567,6 +603,7 @@ class BotChat(object):
         CallToAction('SID_MENU_SUBSCRIPTIONS', 'RootSubscriptionsChatState'),
         CallToAction('SID_MENU_HELP', 'RootHelpChatState'),
     ]
+    REF_SUBSCRIBE_ACTION = 'sub'
 
     @classmethod
     def class_name(cls):
@@ -616,7 +653,18 @@ class BotChat(object):
                                                  **result.extra_args)
 
     def start(self, event):
+        if event.is_postback_referral:
+            logging.debug("[U#%s] postback ref: %s, %s", event.sender_id,
+                          event.postback_referral,
+                          event.postback_referral_ref)
+            self.on_ref(event.postback_referral_ref)
         self.state.show()
+
+    def on_refferal(self, event):
+        logging.debug("[U#%s] ref: %s, %s", event.sender_id,
+                          event.referral,
+                          event.referral_ref)
+        self.on_ref(event.referral_ref)
 
     def on_action(self, type, action_id, param, event):
         logging.debug("%s: on_action(%s): %s arrived",
@@ -628,6 +676,18 @@ class BotChat(object):
         if result:
             self.instantiate_state(result)
             self.state.show()
+
+    def on_ref(self, ref):
+        r = BotRef(ref=ref)
+        if self.REF_SUBSCRIBE_ACTION in r.params:
+            c = Channel.by_oid(r.params[self.REF_SUBSCRIBE_ACTION])
+            if c:
+                res = c.subscribe(self.user.oid)
+                sid = 'SID_SUB_ADDED' if res else 'SID_ERROR'
+                msg = str(BotString(sid, user=self.user, channel=c))
+                self.page.send(self.user.fbid, msg)
+        else:
+            logging.warning("[U#%s] unsupported ref: %s", self.user.oid, ref)
 
 
 def chat_clb_handler(user, page, payload, event):
