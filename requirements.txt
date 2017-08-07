@@ -1,3 +1,4 @@
+Jinja2==2.8.1
 Flask
 -e git+https://github.com/anton-nayshtut/fbmq.git#egg=fbmq
 pymongo
