@@ -1,10 +1,10 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="gunicorn" type="PythonConfigurationType" factoryName="Python">
+  <configuration default="false" name="strings fill" type="PythonConfigurationType" factoryName="Python">
     <option name="INTERPRETER_OPTIONS" value="" />
     <option name="PARENT_ENVS" value="true" />
     <envs>
-      <env name="PYTHONUNBUFFERED" value="1" />
       <env name="GUNICORN_CMD_ARGS" value="-w 1 -b 127.0.0.1:5000" />
+      <env name="PYTHONUNBUFFERED" value="1" />
     </envs>
     <option name="SDK_HOME" value="$PROJECT_DIR$/env/bin/python" />
     <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/" />
@@ -12,8 +12,8 @@
     <option name="ADD_CONTENT_ROOTS" value="true" />
     <option name="ADD_SOURCE_ROOTS" value="true" />
     <module name="locanobot" />
-    <option name="SCRIPT_NAME" value="$PROJECT_DIR$/env/bin/gunicorn" />
-    <option name="PARAMETERS" value="main:app  --reload" />
+    <option name="SCRIPT_NAME" value="translate.py" />
+    <option name="PARAMETERS" value="fill" />
     <option name="SHOW_COMMAND_LINE" value="false" />
     <option name="EMULATE_TERMINAL" value="false" />
     <method />
