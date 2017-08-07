@@ -1,6 +1,7 @@
 import argparse
 import glob
 import os
+import fnmatch
 from bot import BotString
 
 
@@ -27,8 +28,10 @@ def get_identifier(s):
 
 def sids_by_code():
     path = os.path.dirname(os.path.abspath(__file__))
-    files = [file for file in glob.glob(path + '/bot/**/*.py',
-                                        recursive=True)]
+    files = []
+    for root, dirnames, filenames in os.walk(path + '/bot/'):
+        for filename in fnmatch.filter(filenames, '*.py'):
+            files.append(os.path.join(root, filename))
     sids = []
     for fname in files:
         with open(fname) as f:
