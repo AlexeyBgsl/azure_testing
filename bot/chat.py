@@ -414,7 +414,7 @@ class RootSubscriptionsChatState(BasicChatState):
 
     def _prepare_qreps(self):
         qreps = []
-        has_subs = True if len(self.user.subscriptions) else False
+        has_subs = True if len(Channel.all_subscribed(self.user.oid)) else False
         for cta in self.QREP_CTA:
             if not has_subs and cta.class_name == 'SubsListChatState':
                 continue
@@ -429,17 +429,12 @@ class SubsListChatState(BasicChatState):
 
     def _prepare_qreps(self):
         qreps = None
-        if len(self.user.subscriptions):
+        subs = Channel.all_subscribed(self.user.oid)
+        if len(subs):
             qreps = []
-            for chid in self.user.subscriptions:
-                c = Channel.by_chid(chid)
-                if c:
-                    p = self.payload('ClbQRep', str(c.oid))
-                    qreps.append(QuickReply(c.name, p))
-                else:
-                    logging.warning(
-                        "[U#%s] cannot remove nonexistent channel %s",
-                        self.user.oid, chid)
+            for c in subs:
+                p = self.payload('ClbQRep', str(c.chid))
+                qreps.append(QuickReply(c.name, p))
         return qreps
 
     def on_quick_response(self, action_id, event):
@@ -465,7 +460,7 @@ class SubDelChatState(BasicChatState):
 
     def on_quick_response(self, action_id, event):
         if action_id == 'YesPseudoChatState':
-            self.user.unsubscribe(self.chid)
+            self._channel.unsubscribe(self.user.oid)
             return self.done('SID_SUB_REMOVED')
 
         if  action_id == 'NoPseudoChatState':
@@ -483,7 +478,7 @@ class SubAddChatState(BasicChatState):
         if event.is_text_message:
             c = Channel.by_chid_str(event.message_text)
             if c:
-                res = self.user.subscribe(chid=c.chid)
+                res = c.subscribe(self.user.oid)
                 self.chid = c.chid
                 return self.done('SID_SUB_ADDED' if res else 'SID_ERROR')
 

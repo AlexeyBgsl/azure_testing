@@ -10,7 +10,7 @@ class Horn():
     def notify(self, annc):
         c = Channel.by_chid(annc.chid)
         if c:
-            for uid in c.subscribers:
+            for uid in c.subs:
                 u = User.by_oid(uid)
                 if u:
                     message = str(BotString('SID_ANNC_MESSAGE',

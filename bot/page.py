@@ -76,6 +76,7 @@ class BotPage(fbmq.Page):
         user = User.by_fbid(fbid)
         if user is None:
             user = self._user_from_fb_profile(fbid)
+            user.save()
         return user
 
     def register_for_message(self, user, payload):
