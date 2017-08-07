@@ -1,79 +1,78 @@
 import re
-from db.datastore import BasicEntry, BasicTable, retry_db
+import logging
+import uuid
+from db.mongodb import BasicEntry, BasicTable, EntryField, UpdateOps
+
+MAX_CHID_CYPHERS = 9
 
 
 class Users(BasicTable):
     def __init__(self):
-        super().__init__(kind="Users")
+        super().__init__(col_name="Users")
 
     def by_fbid(self, fbid):
-        results = self.simple_query(fbid=fbid)
-        if len(results) > 1:
-            raise ValueError("FB ID must be unique")
-        return results[0] if results else None
-
+        return self.query_unique(fbid=fbid)
 
 class User(BasicEntry):
     table = Users()
+    INIT_FIELDS = [
+        EntryField('fbid', 0),
+        EntryField('fbmsgseq', 0)
+    ]
 
     @classmethod
     def create(cls, data):
-        return cls(cls.table.entity(data))
+        u = cls()
+        u.from_dict(data)
+        return u
 
     @classmethod
     def by_fbid(cls, fbid):
         e = cls.table.by_fbid(fbid)
-        return cls(e) if e else None
-
-    def __init__(self, entity):
-        super().__init__()
-        self.add_db_field('fbid', 0)
-        self.add_db_field('fbmsgseq', 0)
-        self.add_db_field('subscriptions', [])
-        if entity:
-            self.from_entity(entity)
-
-    def subscribe(self, chid):
-        return subscribe(uid=self.oid, chid=chid)
-
-    def unsubscribe(self, chid):
-        return unsubscribe(uid=self.oid, chid=chid)
-
-    def _subscribe(self, chid):
-        if chid not in self.subscriptions:
-            self.subscriptions.append(chid)
-            return True
-        return False
-
-    def _unsubscribe(self, chid):
-        if chid in self.subscriptions:
-            self.subscriptions.remove(chid)
-            return True
-        return False
+        return cls(entity=e) if e else None
 
     def delete(self):
-        while len(self.subscriptions):
-            unsubscribe(self.oid, self.subscriptions[0])
+        channels = self.table.all_subscribed(self.oid)
+        for c in channels:
+            c.unsubscribe(self.oid)
         super().delete()
 
 
 class Channels(BasicTable):
     def __init__(self):
-        super().__init__(kind="Channels", exclude_from_indexes=('desc',))
+        super().__init__(col_name="Channels")
 
 
 class Channel(BasicEntry):
     table = Channels()
+    INIT_FIELDS = [
+        EntryField('owner_uid', None),
+        EntryField('name', None),
+        EntryField('chid', ''),
+        EntryField('status', 'pending'),
+        EntryField('desc', ''),
+        EntryField('subs', [])
+    ]
+
+    @staticmethod
+    def get_chid():
+        chid = uuid.uuid4().int % pow(10, MAX_CHID_CYPHERS)
+        return str(chid).ljust(MAX_CHID_CYPHERS, '0')
 
     @classmethod
     def by_owner_uid(cls, owner_uid):
-        return cls.table.simple_query(owner_uid=owner_uid)
+        return cls.table.query(owner_uid=owner_uid, status='ready')
 
     @classmethod
     def by_chid(cls, chid):
-        e = cls.table.read(chid)
+        e = cls.table.query_unique(chid=chid, status='ready')
         if e:
             return cls(entity=e) if e else None
+
+    @classmethod
+    def all_subscribed(cls, uid):
+        return [cls(entity=e) for e in cls.table.query(subs=uid,
+                                                       status='ready')]
 
     @staticmethod
     def chid_from_str(str):
@@ -81,128 +80,94 @@ class Channel(BasicEntry):
         chid = re.sub(r"-", "", chid)
         return chid if chid.isnumeric() else None
 
-
     @classmethod
     def by_chid_str(cls, str):
         chid = cls.chid_from_str(str)
         return cls.by_chid(chid) if chid else None
 
     def __init__(self, name=None, owner_uid=None, entity=None):
-        super().__init__()
-        self.add_db_field('owner_uid', owner_uid)
-        self.add_db_field('name', name)
-        self.add_db_field('desc', '')
-        self.add_db_field('subscribers', [])
-        if entity:
-            self.from_entity(entity)
+        super().__init__(name=name, owner_uid=owner_uid, entity=entity)
 
-    def delete(self):
-        while len(self.subscribers):
-            unsubscribe(uid=self.subscribers[0], chid=self.chid)
-        super().delete()
-
-    @property
-    def chid(self):
-        return self.oid
+    def save(self):
+        if not self.oid:
+            while True:
+                self.chid = self.get_chid()
+                self.status = 'pending'
+                super().save()
+                r = self.table.query(chid=self.chid)
+                if len(r) == 1:
+                    self.status = 'ready'
+                    self.update(op='$set', val={'status': 'ready'})
+                    break
+        else:
+            super().save()
 
     @property
     def str_chid(self):
-        s = str(self.oid).ljust(16, '0')
-        return '{}-{}-{}-{}'.format(s[:4], s[4:8], s[8:12], s[12:16])
+        return '{}-{}-{}'.format(self.chid[:3], self.chid[3:6], self.chid[6:9])
 
     def subscribe(self, uid):
-        return subscribe(uid=uid, chid=self.oid)
+        r = self.update(op='$addToSet', val={"subs": uid})
+        if r.matched_count == 1:
+            if uid not in self.subs:
+                self.subs.append(uid)
+        else:
+            logging.warning("U#%s: cannot subscribe user %s",
+                            str(self.oid), str(uid))
 
     def unsubscribe(self, uid):
-        return unsubscribe(uid=uid, chid=self.oid)
-
-    def _subscribe(self, uid):
-        if uid not in self.subscribers:
-            self.subscribers.append(uid)
-            return True
-        return False
-
-    def _unsubscribe(self, uid):
-        if uid in self.subscribers:
-            self.subscribers.remove(uid)
-            return True
-        return False
-
-
-@retry_db
-def subscribe(uid, chid):
-    with BasicTable.client.transaction() as t:
-        ue = User.entity_by_oid(uid)
-        ce = Channel.entity_by_oid(chid)
-        if ue and ce:
-            u = User(entity=ue)
-            c = Channel(entity=ce)
-            if u._subscribe(chid):
-                t.put(u.to_entity())
-            if c._subscribe(uid):
-                t.put(c.to_entity())
-            return True
-    return False
-
-
-@retry_db
-def unsubscribe(uid, chid):
-    with BasicTable.client.transaction() as t:
-        ue = User.entity_by_oid(uid)
-        if ue:
-            u = User(entity=ue)
-            if u._unsubscribe(chid):
-                t.put(u.to_entity())
-        ce = Channel.entity_by_oid(chid)
-        if ce:
-            c = Channel(entity=ce)
-            if c._unsubscribe(uid):
-                t.put(c.to_entity())
+        r = self.update(op='$pull', val={"subs": uid})
+        if r.matched_count == 1:
+            if uid in self.subs:
+                self.subs.remove(uid)
+        else:
+            logging.warning("U#%s: cannot unsubscribe user %s",
+                            str(self.oid), str(uid))
 
 
 class Anncs(BasicTable):
     def __init__(self):
-        super().__init__(kind="Announcements",
-                         exclude_from_indexes=('desc', 'title', ))
+        super().__init__(col_name="Channels")
 
 
 class Annc(BasicEntry):
     table = Anncs()
+    INIT_FIELDS = [
+        EntryField('title', None),
+        EntryField('chid', None),
+        EntryField('owner_uid', None),
+        EntryField('desc', '')
+    ]
 
     @classmethod
     def by_owner_uid(cls, owner_uid):
-        return cls.table.simple_query(owner_uid=owner_uid)
+        return cls.table.query(owner_uid=owner_uid)
 
     @classmethod
     def by_chid(self, chid):
-        return self.table.simple_query(chid=chid)
+        return self.table.query(chid=chid)
 
     def __init__(self, title=None, chid=None, owner_uid=None, entity=None):
-        super().__init__()
-        self.add_db_field('title', title)
-        self.add_db_field('chid', chid)
-        self.add_db_field('owner_uid', owner_uid)
-        self.add_db_field('desc', '')
-        if entity:
-            self.from_entity(entity)
+        super().__init__(title=title, chid=chid, owner_uid=owner_uid,
+                         entity=entity)
 
 
 class Strings(BasicTable):
     def __init__(self):
-        super().__init__(kind="Strings")
+        super().__init__(col_name="Strings")
 
     def by_sid(self, sid):
-        results = self.simple_query(sid=sid)
-        if len(results) > 1:
-            raise ValueError("String ID must be unique")
-        return results[0] if len(results) else None
+        return self.query_unique(sid=sid)
 
 
 class String(BasicEntry):
     table = Strings()
     LOCALE_MARKER = 'locale'
-    LOCALE_DELIMITER = '.'
+    LOCALE_DELIMITER = ':'
     DEFAULT_LOCALE = 'en_US'
+    INIT_FIELDS = [
+        EntryField('sid', '')
+    ]
 
     @classmethod
     def locale_aname(cls, locale):
@@ -218,7 +183,7 @@ class String(BasicEntry):
     @classmethod
     def all(cls):
         l = []
-        results = String.table.simple_query()
+        results = String.table.query()
         for e in results:
             s = String()
             s.from_entity(e)
@@ -226,21 +191,16 @@ class String(BasicEntry):
         return l
 
     def __init__(self, sid=None):
-        super().__init__()
-        self.add_db_field('sid', '')
+        super().__init__(sid=sid)
         if sid:
-            self.load(sid)
+            e = self.table.by_sid(sid)
+            self.from_entity(e)
 
     @property
     def in_db(self):
-        return self.oid is not None
-
-    def load(self, sid):
-        e = self.table.by_sid(sid)
-        if e:
-            self.from_entity(e)
-            return True
-        self.sid = sid
+        if self.oid:
+            e = self.table.by_sid(self.oid)
+            return e is not None
         return False
 
     def set(self, locale, text):
@@ -263,25 +223,27 @@ class String(BasicEntry):
 
 class MsgHandlers(BasicTable):
     def __init__(self):
-        super().__init__(kind="Handlers")
+        super().__init__(col_name="Handlers")
 
     def by_fbid(self, fbid):
-        results = self.simple_query(fbid=fbid)
-        if len(results) > 1:
-            raise ValueError("FB ID must be unique")
-        return results[0] if results else None
+        return self.query_unique(fbid=fbid)
 
 
 class MsgHandler(BasicEntry):
     table = MsgHandlers()
+    INIT_FIELDS = [
+        EntryField('fbid', None),
+        EntryField('payload', None)
+    ]
 
     @classmethod
     def get_by_fbid(cls, fbid, auto_remove=True):
         e = cls.table.by_fbid(fbid)
         if e:
+            h = cls(entity=e)
             if auto_remove:
-                cls.table.delete(e.key.id)
-            return cls(entity=e)
+                h.delete()
+            return h
         return None
 
     @classmethod
@@ -293,12 +255,7 @@ class MsgHandler(BasicEntry):
             h.save()
         return h
 
-    def __init__(self, entity=None):
-        super().__init__()
-        if entity:
-            self.from_entity(entity)
-
     def set(self, fbid, payload):
-        self.add_db_field('fbid', fbid)
-        self.add_db_field('payload', payload)
+        self.fbid = fbid
+        self.payload = payload
 
