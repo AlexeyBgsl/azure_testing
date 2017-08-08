@@ -28,7 +28,7 @@ def create_app(config):
 
     logging.info("Registering App: %s", __name__)
 
-    set_env(is_production=config.APP_ENV_GAE)
+    set_env(is_production=config.PRODUCTION_APP_ENV)
 
     create_page()
 

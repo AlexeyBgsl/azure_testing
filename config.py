@@ -3,10 +3,10 @@ App Configuration
 """
 import os
 
-APP_ENV_GAE = (os.getenv('APP_ENV_GAE', '') == '1')
-GCLOUD_PROJECT = os.getenv('GCLOUD_PROJECT', '')
+PRODUCTION_APP_ENV = (os.getenv('PRODUCTION_APP_ENV', '') == '1')
 
-if APP_ENV_GAE:
+
+if PRODUCTION_APP_ENV:
     # Production
     DEBUG = False
     TESTING = False
