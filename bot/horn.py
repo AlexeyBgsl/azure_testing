@@ -8,7 +8,7 @@ class Horn():
         self.page = page
 
     def notify(self, annc):
-        c = Channel.by_chid(annc.chid)
+        c = Channel.by_oid(annc.chid)
         if c:
             for uid in c.subs:
                 u = User.by_oid(uid)

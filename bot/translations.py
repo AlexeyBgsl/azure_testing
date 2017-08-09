@@ -138,7 +138,7 @@ class BotString(String):
             d[self.SUB_USER_LAST_NAME] = self.user.last_name
         if self.channel:
             d[self.SUB_CHANNEL_NAME] = self.channel.name
-            d[self.SUB_CHANNEL_ID] = self.channel.str_chid
+            d[self.SUB_CHANNEL_ID] = self.channel.str_uchid
         if self.annc:
             d[self.SUB_ANNC_TITLE] = self.annc.title
             d[self.SUB_ANNC_TEXT] = self.annc.text

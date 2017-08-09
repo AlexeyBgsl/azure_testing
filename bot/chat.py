@@ -98,7 +98,7 @@ class BasicChatState(ABC):
 
     @property
     def _channel(self):
-        return Channel.by_chid(self.chid) if self.chid else None
+        return Channel.by_oid(self.chid) if self.chid else None
 
     @property
     def _announcement(self):
@@ -273,7 +273,7 @@ class CreateChannelsChatState(BasicChatState):
 
     def create_channel(self, name):
         c = Channel.create(name=name, owner_uid=self.user.oid)
-        r = BotRef(sub=c.chid)
+        r = BotRef(sub=c.uchid)
         mc = self.page.get_messenger_code(ref=r.ref)
         c.set_code(ref=r.ref, messenger_code_url=mc)
         return c
@@ -283,7 +283,7 @@ class CreateChannelsChatState(BasicChatState):
             logging.debug("[U#%s] Desired channel name is: %s",
                           event.sender_id, event.message_text)
             c = self.create_channel(event.message_text)
-            return HandlerResult('GetChannelDescChatState', chid=str(c.chid))
+            return HandlerResult('GetChannelDescChatState', chid=str(c.oid))
 
         return self.reinstantiate()
 
@@ -298,7 +298,7 @@ class GetChannelDescChatState(BasicChatState):
         if event.is_text_message:
             c = self._channel
             logging.debug("[U#%s] Desired %s channel desc is: %s",
-                          event.sender_id, c.str_chid, event.message_text)
+                          event.sender_id, c.oid, event.message_text)
             c.desc = event.message_text
             c.save()
             return self.done('SID_CHANNEL_CREATED')
@@ -311,12 +311,6 @@ class SelectChannelChatState(BasicChatState):
     USER_INPUT = True
     NEXT_CLS_NAME = None
 
-    def on_selection(self, chid):
-        c = Channel.by_chid(chid)
-        if c:
-            return HandlerResult(self.NEXT_CLS_NAME, chid=chid)
-        return HandlerResult(self.class_name())
-
     def _prepare_qreps(self):
         ch_list = Channel.by_owner_uid(self.user.oid)
         qreps = []
@@ -327,12 +321,17 @@ class SelectChannelChatState(BasicChatState):
         return qreps
 
     def on_quick_response(self, action_id, event):
-        return self.on_selection(action_id)
+        c = Channel.by_oid(action_id)
+        if c:
+            return HandlerResult(self.NEXT_CLS_NAME, chid=str(c.oid))
+
+        return self.reinstantiate()
 
     def on_user_input(self, event):
         if event.is_text_message:
-            chid = Channel.chid_from_str(event.message_text)
-            return self.on_selection(chid)
+            c = Channel.by_chid_str(event.message_text)
+            if c:
+                return HandlerResult(self.NEXT_CLS_NAME, chid=str(c.oid))
 
         return self.reinstantiate()
 
@@ -435,7 +434,7 @@ class SubsListChatState(BasicChatState):
         if len(subs):
             qreps = []
             for c in subs:
-                p = self.payload('ClbQRep', str(c.chid))
+                p = self.payload('ClbQRep', str(c.uchid))
                 qreps.append(QuickReply(c.name, p))
         return qreps
 
@@ -679,7 +678,7 @@ class BotChat(object):
     def on_ref(self, ref):
         r = BotRef(ref=ref)
         if self.REF_SUBSCRIBE_ACTION in r.params:
-            c = Channel.by_oid(r.params[self.REF_SUBSCRIBE_ACTION])
+            c = Channel.by_uchid(r.params[self.REF_SUBSCRIBE_ACTION])
             if c:
                 res = c.subscribe(self.user.oid)
                 sid = 'SID_SUB_ADDED' if res else 'SID_ERROR'
