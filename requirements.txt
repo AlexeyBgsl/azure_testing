@@ -1,3 +1,4 @@
 Flask
 fbmq
 pymongo
+azure-storage
