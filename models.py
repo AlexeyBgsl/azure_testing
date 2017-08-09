@@ -33,7 +33,7 @@ class User(BasicEntry):
         return cls(entity=e) if e else None
 
     def delete(self):
-        channels = self.table.all_subscribed(self.oid)
+        channels = Channel.table.all_subscribed(self.oid)
         for c in channels:
             c.unsubscribe(self.oid)
         super().delete()
@@ -49,40 +49,40 @@ class Channel(BasicEntry):
     INIT_FIELDS = [
         EntryField('owner_uid', None),
         EntryField('name', None),
-        EntryField('chid', ''),
+        EntryField('uchid', ''),
         EntryField('status', 'pending'),
         EntryField('desc', ''),
         EntryField('subs', []),
         EntryField('messenger_code', ''),
     ]
 
-    def _alloc_chid(self):
+    def _alloc_uchid(self):
         while True:
-            self.chid = self.get_chid()
+            self.uchid = self.gen_uchid()
             self.status = 'pending'
             super().save()
-            r = self.table.query(chid=self.chid)
+            r = self.table.query(uchid=self.uchid)
             assert len(r)
             if len(r) == 1:
                 self.status = 'ready'
                 self.update_db(op=UpdateOps.Supported.SET,
                                val={'status': 'ready'})
                 break
-            logging.info("CHID#%s is already in use. Regenerating... ",
-                         self.chid)
+            logging.info("User CHID#%s is already in use. Regenerating... ",
+                         self.uchid)
 
     @staticmethod
-    def get_chid():
-        chid = uuid.uuid4().int % pow(10, MAX_CHID_CYPHERS)
-        return str(chid).ljust(MAX_CHID_CYPHERS, '0')
+    def gen_uchid():
+        uchid = uuid.uuid4().int % pow(10, MAX_CHID_CYPHERS)
+        return str(uchid).ljust(MAX_CHID_CYPHERS, '0')
 
     @classmethod
     def by_owner_uid(cls, owner_uid):
         return cls.table.query(owner_uid=owner_uid, status='ready')
 
     @classmethod
-    def by_chid(cls, chid):
-        e = cls.table.query_unique(chid=chid, status='ready')
+    def by_uchid(cls, uchid):
+        e = cls.table.query_unique(uchid=uchid, status='ready')
         if e:
             return cls(entity=e) if e else None
 
@@ -92,36 +92,36 @@ class Channel(BasicEntry):
                                                        status='ready')]
 
     @staticmethod
-    def chid_from_str(str):
-        chid = re.sub(r"\s+", "", str, flags=re.UNICODE)
-        chid = re.sub(r"-", "", chid)
-        return chid if chid.isnumeric() else None
+    def uchid_from_str(str):
+        uchid = re.sub(r"\s+", "", str, flags=re.UNICODE)
+        uchid = re.sub(r"-", "", uchid)
+        return uchid if uchid.isnumeric() else None
 
     @classmethod
-    def by_chid_str(cls, str):
-        chid = cls.chid_from_str(str)
-        return cls.by_chid(chid) if chid else None
+    def by_uchid_str(cls, str):
+        uchid = cls.uchid_from_str(str)
+        return cls.by_uchid(uchid) if uchid else None
 
     @classmethod
     def create(cls, name, owner_uid):
         c = cls()
         c.name = name
         c.owner_uid = owner_uid
-        c._alloc_chid()
+        c._alloc_uchid()
         return c
 
     def __init__(self, entity=None):
         super().__init__(entity=entity)
 
     def set_code(self, ref=None, messenger_code_url=None):
-        assert self.chid
+        assert self.oid
         opts = UpdateOps()
         if messenger_code_url:
             FileStorage.upload_from_url(messenger_code_url,
                                         'messenger-code',
-                                        self.chid)
+                                        self.uchid)
             self.messenger_code = FileStorage.get_url('messenger-code',
-                                                      self.chid)
+                                                      self.uchid)
             opts.add(UpdateOps.Supported.SET,
                      val={'messenger_code': self.messenger_code})
         if opts.has_update:
@@ -129,13 +129,15 @@ class Channel(BasicEntry):
 
     def save(self):
         if not self.oid:
-            self._alloc_chid()
+            self._alloc_uchid()
         else:
             super().save()
 
     @property
-    def str_chid(self):
-        return '{}-{}-{}'.format(self.chid[:3], self.chid[3:6], self.chid[6:9])
+    def str_uchid(self):
+        return '{}-{}-{}'.format(self.uchid[:3],
+                                 self.uchid[3:6],
+                                 self.uchid[6:9])
 
     def subscribe(self, uid):
         r = self.update(op=UpdateOps.Supported.ADD_TO_LIST, val={"subs": uid})
