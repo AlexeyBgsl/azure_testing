@@ -272,8 +272,10 @@ class CreateChannelsChatState(BasicChatState):
     USER_INPUT = True
 
     def create_channel(self, name):
-        c = Channel(name=name, owner_uid=self.user.oid)
-        c.save()
+        c = Channel.create(name=name, owner_uid=self.user.oid)
+        r = BotRef(sub=c.chid)
+        mc = self.page.get_messenger_code(ref=r.ref)
+        c.set_code(ref=r.ref, messenger_code_url=mc)
         return c
 
     def on_user_input(self, event):
