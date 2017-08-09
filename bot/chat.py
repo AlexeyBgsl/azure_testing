@@ -655,7 +655,7 @@ class BotChat(object):
             self.on_ref(event.postback_referral_ref)
         self.state.show()
 
-    def on_refferal(self, event):
+    def on_referral(self, event):
         logging.debug("[U#%s] ref: %s, %s", event.sender_id,
                           event.referral,
                           event.referral_ref)

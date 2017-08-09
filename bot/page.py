@@ -159,7 +159,7 @@ class BotPage(fbmq.Page):
             logging.error("[U#%s] [on_message] cannot get user",
                           sender_id)
         else:
-            return BotChat(self, user).on_refferal(event)
+            return BotChat(self, user).on_referral(event)
 
     @dump_member_func
     def on_after_send(self, payload, response):
