@@ -1,6 +1,7 @@
 from abc import ABC
 from enum import Enum
 from pymongo import MongoClient
+from bson.objectid import ObjectId
 from .config import MONGODB_URI, MONGODB_DB
 
 
@@ -46,6 +47,8 @@ class BasicEntry(ABC):
 
     @classmethod
     def by_oid(cls, oid):
+        if isinstance(oid, str):
+            oid = ObjectId(oid)
         e = cls.table.read(oid)
         return cls(entity = e) if e else None
 
