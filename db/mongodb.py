@@ -1,8 +1,7 @@
 from abc import ABC
-import logging
+from enum import Enum
 from pymongo import MongoClient
-from bson.objectid import ObjectId
-from db.config import MONGODB_URI, MONGODB_DB
+from .config import MONGODB_URI, MONGODB_DB
 
 
 OID_KEY=u'_id'
@@ -15,16 +14,24 @@ class EntryField(object):
 
 
 class UpdateOps(object):
+    class Supported(Enum):
+        SET = '$set'
+        ADD_TO_LIST = '$addToSet'
+        DEL_FROM_LIST = '$pull'
+
     def __init__(self, op=None, val=None):
         self.opts = {}
         if op:
             self.add(op, val)
 
     def add(self, op, val):
-        assert op and val and isinstance(val, dict)
-        if not self.opts.get(op):
-            self.opts[op] = {}
-        self.opts[op].update(val)
+        assert op
+        assert isinstance(op, self.Supported)
+        assert val and isinstance(val, dict)
+        _op = op.value
+        if not self.opts.get(_op):
+            self.opts[_op] = {}
+        self.opts[_op].update(val)
 
     @property
     def update(self):
@@ -83,18 +90,18 @@ class BasicEntry(ABC):
 
     def save(self):
         if self.oid:
-            self.update(op='$set', val=self.to_dict())
+            self.update_db(op=UpdateOps.Supported.SET, val=self.to_dict())
         else:
             result = self.table.collection.insert_one(self.to_dict())
             self.oid = result.inserted_id
 
-    def update_ex(self, ops):
+    def update_db_ex(self, ops):
         assert self.oid
         return self.table.collection.update_one({OID_KEY: self.oid}, ops.update)
 
-    def update(self, op, val):
+    def update_db(self, op, val):
         assert self.oid
-        return self.update_ex(UpdateOps(op=op, val=val))
+        return self.update_db_ex(UpdateOps(op=op, val=val))
 
     def read(self):
         entity = self.table.read(self.oid)
