@@ -1,2 +1,3 @@
-from db.models import User, Channel, Annc, String, MsgHandler
+from .models import User, Channel, Annc, String, MsgHandler
+from .blob import FileStorage
 

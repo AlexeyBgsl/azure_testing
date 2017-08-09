@@ -1,7 +1,7 @@
 import re
 import logging
 import uuid
-from db.mongodb import BasicEntry, BasicTable, EntryField, UpdateOps
+from .mongodb import BasicEntry, BasicTable, EntryField, UpdateOps
 
 MAX_CHID_CYPHERS = 9
 
@@ -97,7 +97,8 @@ class Channel(BasicEntry):
                 r = self.table.query(chid=self.chid)
                 if len(r) == 1:
                     self.status = 'ready'
-                    self.update(op='$set', val={'status': 'ready'})
+                    self.update_db(op=UpdateOps.Supported.SET,
+                                   val={'status': 'ready'})
                     break
         else:
             super().save()
@@ -107,7 +108,7 @@ class Channel(BasicEntry):
         return '{}-{}-{}'.format(self.chid[:3], self.chid[3:6], self.chid[6:9])
 
     def subscribe(self, uid):
-        r = self.update(op='$addToSet', val={"subs": uid})
+        r = self.update(op=UpdateOps.Supported.ADD_TO_LIST, val={"subs": uid})
         if r.matched_count == 1:
             if uid not in self.subs:
                 self.subs.append(uid)
@@ -116,7 +117,8 @@ class Channel(BasicEntry):
                             str(self.oid), str(uid))
 
     def unsubscribe(self, uid):
-        r = self.update(op='$pull', val={"subs": uid})
+        r = self.update(op=UpdateOps.Supported.DEL_FROM_LIST,
+                        val={"subs": uid})
         if r.matched_count == 1:
             if uid in self.subs:
                 self.subs.remove(uid)
