@@ -2,6 +2,7 @@ import re
 import logging
 import uuid
 from .mongodb import BasicEntry, BasicTable, EntryField, UpdateOps
+from .blob import FileStorage
 
 MAX_CHID_CYPHERS = 9
 
@@ -51,8 +52,24 @@ class Channel(BasicEntry):
         EntryField('chid', ''),
         EntryField('status', 'pending'),
         EntryField('desc', ''),
-        EntryField('subs', [])
+        EntryField('subs', []),
+        EntryField('messenger_code', ''),
     ]
+
+    def _alloc_chid(self):
+        while True:
+            self.chid = self.get_chid()
+            self.status = 'pending'
+            super().save()
+            r = self.table.query(chid=self.chid)
+            assert len(r)
+            if len(r) == 1:
+                self.status = 'ready'
+                self.update_db(op=UpdateOps.Supported.SET,
+                               val={'status': 'ready'})
+                break
+            logging.info("CHID#%s is already in use. Regenerating... ",
+                         self.chid)
 
     @staticmethod
     def get_chid():
@@ -85,21 +102,34 @@ class Channel(BasicEntry):
         chid = cls.chid_from_str(str)
         return cls.by_chid(chid) if chid else None
 
-    def __init__(self, name=None, owner_uid=None, entity=None):
-        super().__init__(name=name, owner_uid=owner_uid, entity=entity)
+    @classmethod
+    def create(cls, name, owner_uid):
+        c = cls()
+        c.name = name
+        c.owner_uid = owner_uid
+        c._alloc_chid()
+        return c
+
+    def __init__(self, entity=None):
+        super().__init__(entity=entity)
+
+    def set_code(self, ref=None, messenger_code_url=None):
+        assert self.chid
+        opts = UpdateOps()
+        if messenger_code_url:
+            FileStorage.upload_from_url(messenger_code_url,
+                                        'messenger-code',
+                                        self.chid)
+            self.messenger_code = FileStorage.get_url('messenger-code',
+                                                      self.chid)
+            opts.add(UpdateOps.Supported.SET,
+                     val={'messenger_code': self.messenger_code})
+        if opts.has_update:
+            self.update_db_ex(opts)
 
     def save(self):
         if not self.oid:
-            while True:
-                self.chid = self.get_chid()
-                self.status = 'pending'
-                super().save()
-                r = self.table.query(chid=self.chid)
-                if len(r) == 1:
-                    self.status = 'ready'
-                    self.update_db(op=UpdateOps.Supported.SET,
-                                   val={'status': 'ready'})
-                    break
+            self._alloc_chid()
         else:
             super().save()
 

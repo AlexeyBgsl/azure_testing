@@ -20,6 +20,7 @@ class UpdateOps(object):
         DEL_FROM_LIST = '$pull'
 
     def __init__(self, op=None, val=None):
+        self.has_update = False
         self.opts = {}
         if op:
             self.add(op, val)
@@ -32,6 +33,7 @@ class UpdateOps(object):
         if not self.opts.get(_op):
             self.opts[_op] = {}
         self.opts[_op].update(val)
+        self.has_update = True
 
     @property
     def update(self):
