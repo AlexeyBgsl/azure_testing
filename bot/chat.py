@@ -480,6 +480,8 @@ class SubAddChatState(BasicChatState):
             c = Channel.by_uchid_str(event.message_text)
             if c:
                 self.chid = c.oid
+                if self.user.oid in c.subs:
+                    return self.done('SID_SUB_EXISTS')
                 c.subscribe(self.user.oid)
                 if self.user.oid in c.subs:
                     return self.done('SID_SUB_ADDED')
@@ -682,8 +684,11 @@ class BotChat(object):
         if self.REF_SUBSCRIBE_ACTION in r.params:
             c = Channel.by_uchid(r.params[self.REF_SUBSCRIBE_ACTION])
             if c:
-                res = c.subscribe(self.user.oid)
-                sid = 'SID_SUB_ADDED' if res else 'SID_ERROR'
+                if self.user.oid in c.subs:
+                    sid = 'SID_SUB_EXISTS'
+                else:
+                    c.subscribe(self.user.oid)
+                    sid = 'SID_SUB_ADDED' if self.user.oid in c.subs else 'SID_ERROR'
                 msg = str(BotString(sid, user=self.user, channel=c))
                 self.page.send(self.user.fbid, msg)
         else:

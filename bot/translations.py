@@ -61,6 +61,7 @@ DefaultStrings = dict(
     SID_DEL_SUBSCRIPTION="Unsubscribe",
     SID_SUBSCRIPTIONS_PROMPT='What do you want to do next?',
     SID_SUB_ADDED="Subscription to channel $CHANNEL_NAME added",
+    SID_SUB_EXISTS="You are already subscribed to channel $CHANNEL_NAME",
     SID_ENTER_CHANNEL_ID_PROMPT="Enter desired Channel ID",
     SID_SELECT_SUB_PROMPT=('Please select a desired Subscription from list '
                            'or enter Channel ID'),
