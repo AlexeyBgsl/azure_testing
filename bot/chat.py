@@ -477,11 +477,13 @@ class SubAddChatState(BasicChatState):
 
     def on_user_input(self, event):
         if event.is_text_message:
-            c = Channel.by_chid_str(event.message_text)
+            c = Channel.by_uchid_str(event.message_text)
             if c:
-                res = c.subscribe(self.user.oid)
-                self.chid = c.chid
-                return self.done('SID_SUB_ADDED' if res else 'SID_ERROR')
+                self.chid = c.oid
+                c.subscribe(self.user.oid)
+                if self.user.oid in c.subs:
+                    return self.done('SID_SUB_ADDED')
+                return self.done('SID_ERROR')
 
         return self.reinstantiate()
 
