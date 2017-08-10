@@ -2,3 +2,5 @@ Flask
 fbmq
 pymongo
 azure-storage
+pyqrcode
+pypng
