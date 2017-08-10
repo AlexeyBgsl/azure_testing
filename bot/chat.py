@@ -433,7 +433,7 @@ class SubsListChatState(BasicChatState):
         if len(subs):
             qreps = []
             for c in subs:
-                p = self.payload('ClbQRep', str(c.uchid))
+                p = self.payload('ClbQRep', str(c.oid))
                 qreps.append(QuickReply(c.name, p))
         return qreps
 
