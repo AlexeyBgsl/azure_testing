@@ -52,6 +52,19 @@ class BasicEntry(ABC):
         e = cls.table.read(oid)
         return cls(entity = e) if e else None
 
+    @classmethod
+    def all(cls):
+        return cls.find()
+
+    @classmethod
+    def find(cls, **kwargs):
+        return [cls(entity=e) for e in cls.table.query(**kwargs)]
+
+    @classmethod
+    def find_unique(cls, **kwargs):
+        e = cls.table.query_unique(**kwargs)
+        return cls(entity=e)
+
     def __add_db_property(self, name):
         if not name in self.db_fields:
             self.db_fields.append(name)
