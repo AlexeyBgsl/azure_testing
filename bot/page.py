@@ -73,14 +73,20 @@ class BotPage(fbmq.Page):
         return True
 
     def create_or_update_user(self, fbid):
-        user = User.by_fbid(fbid)
+        user = User.find_unique(fbid=fbid)
         if user is None:
             user = self._user_from_fb_profile(fbid)
             user.save()
         return user
 
     def register_for_message(self, user, payload):
-        MsgHandler.create_or_update(user.fbid, payload)
+        # Clean up - delete previously created handler if exists
+        h = MsgHandler().find_unique(fbid=user.fbid)
+        if h:
+            h.delete()
+        # Register new handler
+        h = MsgHandler(fbid=user.fbid, payload=payload)
+        h.save()
 
     @dump_member_func
     def on_start(self, event):
@@ -111,9 +117,10 @@ class BotPage(fbmq.Page):
             logging.debug("[U#%s] [on_message] ignored as a quick reply",
                           sender_id)
         else:
-            h = MsgHandler.get_by_fbid(sender_id)
+            h = MsgHandler.find_unique(fbid=sender_id)
             if h:
                 chat_msg_handler(user, get_page(), h.payload, event)
+                h.delete()
             elif event.is_text_message:
                 message = event.message_text
                 logging.debug("[U#%s] [on_message] %s", sender_id, message)

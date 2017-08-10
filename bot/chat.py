@@ -312,10 +312,9 @@ class SelectChannelChatState(BasicChatState):
     NEXT_CLS_NAME = None
 
     def _prepare_qreps(self):
-        ch_list = Channel.by_owner_uid(self.user.oid)
+        channels = Channel.find(owner_uid=self.user.oid)
         qreps = []
-        for e in ch_list:
-            c = Channel(entity=e)
+        for c in channels:
             p = self.payload('ClbQRep', str(c.oid))
             qreps.append(QuickReply(c.name, p))
         return qreps
@@ -514,7 +513,7 @@ class MakeAnncChatState(BasicChatState):
         return 'SID_ANNC_CREATE_CHANNEL_PROMPT'
 
     def show(self):
-        self.has_channels = (len(Channel.by_owner_uid(self.user.oid)) != 0)
+        self.has_channels = (len(Channel.find(owner_uid=self.user.oid)) != 0)
         super().show()
 
 
@@ -682,7 +681,7 @@ class BotChat(object):
     def on_ref(self, ref):
         r = BotRef(ref=ref)
         if self.REF_SUBSCRIBE_ACTION in r.params:
-            c = Channel.by_uchid(r.params[self.REF_SUBSCRIBE_ACTION])
+            c = Channel.find_unique(uchid=r.params[self.REF_SUBSCRIBE_ACTION])
             if c:
                 if self.user.oid in c.subs:
                     sid = 'SID_SUB_EXISTS'
