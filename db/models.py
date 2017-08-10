@@ -27,11 +27,6 @@ class User(BasicEntry):
         u.from_dict(data)
         return u
 
-    @classmethod
-    def by_fbid(cls, fbid):
-        e = cls.table.by_fbid(fbid)
-        return cls(entity=e) if e else None
-
     def delete(self):
         channels = Channel.table.all_subscribed(self.oid)
         for c in channels:
@@ -61,7 +56,7 @@ class Channel(BasicEntry):
             self.uchid = self.gen_uchid()
             self.status = 'pending'
             super().save()
-            r = self.table.query(uchid=self.uchid)
+            r = super().find(uchid=self.uchid)
             assert len(r)
             if len(r) == 1:
                 self.status = 'ready'
@@ -77,19 +72,16 @@ class Channel(BasicEntry):
         return str(uchid).ljust(MAX_CHID_CYPHERS, '0')
 
     @classmethod
-    def by_owner_uid(cls, owner_uid):
-        return cls.table.query(owner_uid=owner_uid, status='ready')
+    def find(cls, **kwargs):
+        return super().find(status='ready', **kwargs)
 
     @classmethod
-    def by_uchid(cls, uchid):
-        e = cls.table.query_unique(uchid=uchid, status='ready')
-        if e:
-            return cls(entity=e) if e else None
+    def find_unique(cls, **kwargs):
+        return super().find_unique(status='ready', **kwargs)
 
     @classmethod
     def all_subscribed(cls, uid):
-        return [cls(entity=e) for e in cls.table.query(subs=uid,
-                                                       status='ready')]
+        return cls.find(subs=uid)
 
     @staticmethod
     def uchid_from_str(str):
@@ -100,7 +92,7 @@ class Channel(BasicEntry):
     @classmethod
     def by_uchid_str(cls, str):
         uchid = cls.uchid_from_str(str)
-        return cls.by_uchid(uchid) if uchid else None
+        return cls.find_unique(uchid=uchid) if uchid else None
 
     @classmethod
     def create(cls, name, owner_uid):
@@ -135,12 +127,10 @@ class Channel(BasicEntry):
 
     @property
     def str_uchid(self):
-        return '{}-{}-{}'.format(self.uchid[:3],
-                                 self.uchid[3:6],
-                                 self.uchid[6:9])
+        return '{}-{}-{}'.format(self.uchid[:3], self.uchid[3:6], self.uchid[6:9])
 
     def subscribe(self, uid):
-        r = self.update(op=UpdateOps.Supported.ADD_TO_LIST, val={"subs": uid})
+        r = self.update_db(op=UpdateOps.Supported.ADD_TO_LIST, val={"subs": uid})
         if r.matched_count == 1:
             if uid not in self.subs:
                 self.subs.append(uid)
@@ -149,8 +139,8 @@ class Channel(BasicEntry):
                             str(self.oid), str(uid))
 
     def unsubscribe(self, uid):
-        r = self.update(op=UpdateOps.Supported.DEL_FROM_LIST,
-                        val={"subs": uid})
+        r = self.update_db(op=UpdateOps.Supported.DEL_FROM_LIST,
+                           val={"subs": uid})
         if r.matched_count == 1:
             if uid in self.subs:
                 self.subs.remove(uid)
@@ -173,14 +163,6 @@ class Annc(BasicEntry):
         EntryField('desc', '')
     ]
 
-    @classmethod
-    def by_owner_uid(cls, owner_uid):
-        return cls.table.query(owner_uid=owner_uid)
-
-    @classmethod
-    def by_chid(self, chid):
-        return self.table.query(chid=chid)
-
     def __init__(self, title=None, chid=None, owner_uid=None, entity=None):
         super().__init__(title=title, chid=chid, owner_uid=owner_uid,
                          entity=entity)
@@ -189,9 +171,6 @@ class Annc(BasicEntry):
 class Strings(BasicTable):
     def __init__(self):
         super().__init__(col_name="Strings")
-
-    def by_sid(self, sid):
-        return self.query_unique(sid=sid)
 
 
 class String(BasicEntry):
@@ -214,21 +193,12 @@ class String(BasicEntry):
             return t[1]
         return None
 
-    @classmethod
-    def all(cls):
-        l = []
-        results = String.table.query()
-        for e in results:
-            s = String()
-            s.from_entity(e)
-            l.append(s)
-        return l
-
     def __init__(self, sid=None):
         super().__init__(sid=sid)
         if sid:
-            e = self.table.by_sid(sid)
-            self.from_entity(e)
+            e = self.table.query_unique(sid=sid)
+            if e:
+                self.from_entity(e)
 
     @property
     def in_db(self):
@@ -259,9 +229,6 @@ class MsgHandlers(BasicTable):
     def __init__(self):
         super().__init__(col_name="Handlers")
 
-    def by_fbid(self, fbid):
-        return self.query_unique(fbid=fbid)
-
 
 class MsgHandler(BasicEntry):
     table = MsgHandlers()
@@ -269,27 +236,3 @@ class MsgHandler(BasicEntry):
         EntryField('fbid', None),
         EntryField('payload', None)
     ]
-
-    @classmethod
-    def get_by_fbid(cls, fbid, auto_remove=True):
-        e = cls.table.by_fbid(fbid)
-        if e:
-            h = cls(entity=e)
-            if auto_remove:
-                h.delete()
-            return h
-        return None
-
-    @classmethod
-    def create_or_update(cls, fbid, payload, auto_save=True):
-        e = cls.table.by_fbid(fbid)
-        h = cls(entity=e)
-        h.set(fbid=fbid, payload=payload)
-        if auto_save:
-            h.save()
-        return h
-
-    def set(self, fbid, payload):
-        self.fbid = fbid
-        self.payload = payload
-
