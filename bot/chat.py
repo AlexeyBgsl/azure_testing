@@ -61,10 +61,11 @@ class ClassCollection(object):
 
 
 class CallToAction(object):
-    def __init__(self, title_sid, class_name, action_id=None):
+    def __init__(self, title_sid, class_name, action_id=None, cond=None):
         self.title_sid = title_sid
         self.class_name = class_name
         self.action_id = action_id if action_id else class_name
+        self.cond = cond
 
     def title(self, user=None):
         return str(BotString(self.title_sid, user=user))
@@ -105,13 +106,13 @@ class BasicChatState(ABC):
         return Annc.by_oid(self.aid) if self.aid else None
 
     def _prepare_qreps(self):
-        if not self.QREP_CTA:
-            return None
         qreps = []
         for cta in self.QREP_CTA:
+            if cta.cond and not cta.cond(self, cta):
+                continue
             p = self.payload('ClbQRep', cta.action_id)
             qreps.append(QuickReply(cta.title(self.user), p))
-        return qreps
+        return qreps if len(qreps) else None
 
     def _send(self, sid, with_qreps=False):
         qreps = None
@@ -257,13 +258,22 @@ class BrowseChannelsChatState(BasicChatState):
     MSG_STR_ID = 'SID_BROWSE_CHANNELS_PROMPT'
 
 
+def _edit_chan_root_cond(state, cts):
+    return state.has_channels
+
+
 @step_collection.register
 class MyChannelsChatState(BasicChatState):
     QREP_CTA = [
         CallToAction('SID_CREATE_CHANNEL', 'CreateChannelsChatState'),
-        CallToAction('SID_EDIT_CHANNEL', 'EditChannelRootChatState'),
+        CallToAction('SID_EDIT_CHANNEL', 'EditChannelRootChatState',
+                     cond=_edit_chan_root_cond),
     ]
     MSG_STR_ID = 'SID_MY_CHANNELS_PROMPT'
+
+    def show(self):
+        self.has_channels = (len(Channel.find(owner_uid=self.user.oid)) != 0)
+        super().show()
 
 
 @step_collection.register
@@ -404,23 +414,22 @@ class DeleteChannelChatState(BasicChatState):
         return self.reinstantiate()
 
 
+def _subs_list_cond(state, cts):
+    return len(state.subs) != 0
+
+
 @step_collection.register
 class RootSubscriptionsChatState(BasicChatState):
     QREP_CTA = [
-        CallToAction('SID_LIST_SUBSCRIPTIONS', 'SubsListChatState'),
+        CallToAction('SID_LIST_SUBSCRIPTIONS', 'SubsListChatState',
+                     cond=_subs_list_cond),
         CallToAction('SID_ADD_SUBSCRIPTION', 'SubAddChatState'),
     ]
     MSG_STR_ID = 'SID_SUBSCRIPTIONS_PROMPT'
 
-    def _prepare_qreps(self):
-        qreps = []
-        has_subs = True if len(Channel.all_subscribed(self.user.oid)) else False
-        for cta in self.QREP_CTA:
-            if not has_subs and cta.class_name == 'SubsListChatState':
-                continue
-            p = self.payload('ClbQRep', cta.action_id)
-            qreps.append(QuickReply(cta.title(self.user), p))
-        return qreps
+    def show(self):
+        self.subs = Channel.all_subscribed(self.user.oid)
+        super().show()
 
 
 @step_collection.register
@@ -489,23 +498,18 @@ class SubAddChatState(BasicChatState):
         return self.reinstantiate()
 
 
+def _annc_select_chan_cond(state, cts):
+    return state.has_channels
+
+
 @step_collection.register
 class MakeAnncChatState(BasicChatState):
     MSG_STR_ID = 'SID_ANNC_ROOT_PROMPT'
     QREP_CTA = [
         CallToAction('SID_ANNC_NEW_CHANNEL', 'CreateChannelsChatState'),
-        CallToAction('SID_ANNC_SELECT_CHANNEL', 'AnncSelectChannelChatState'),
+        CallToAction('SID_ANNC_SELECT_CHANNEL', 'AnncSelectChannelChatState',
+                     cond=_annc_select_chan_cond),
     ]
-
-    def _prepare_qreps(self):
-        qreps = []
-        for cta in self.QREP_CTA:
-            if (not self.has_channels and
-                        cta.class_name == 'AnncSelectChannelChatState'):
-                continue
-            p = self.payload('ClbQRep', cta.action_id)
-            qreps.append(QuickReply(cta.title(self.user), p))
-        return qreps
 
     def _get_show_sid(self):
         if self.has_channels:
