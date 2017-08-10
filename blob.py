@@ -1,8 +1,8 @@
 import os
 import requests
 from io import BytesIO
-from tempfile import NamedTemporaryFile
 from azure.storage.blob import BlockBlobService, ContentSettings
+from azure.common import AzureHttpError
 from .config import STORAGE_ACCOUNT_NAME, STORAGE_ACCOUNT_KEY
 
 
@@ -34,8 +34,11 @@ class FileStorage(object):
         return cls.service.make_blob_url(type, fname)
 
     @classmethod
-    def upload(cls, local_fname, type, fname):
-        ctx = cls.content_by_fname(local_fname)
+    def upload(cls, local_fname, type, fname, content_type=None):
+        if content_type:
+            ctx = ContentSettings(content_type=content_type)
+        else:
+            ctx = cls.content_by_fname(local_fname)
         cls.service.create_blob_from_path(type,
                                           fname,
                                           local_fname,
@@ -55,14 +58,8 @@ class FileStorage(object):
         return None
 
     @classmethod
-    def upload_from_url_1(cls, url, type, fname):
-        with requests.get(url, stream=True) as r:
-            with NamedTemporaryFile() as f:
-                for chunk in r.iter_content(1024):
-                    if chunk:
-                        f.write(chunk)
-                content_type = r.headers.get('Content-Type', None)
-                ctx = cls.content_by_responce(r)
-                cls.service.create_blob_from_path(type, fname,
-                                                  f.name,
-                                                  content_settings=ctx)
+    def remove(cls, type, fname):
+        try:
+            cls.service.delete_blob(type, fname)
+        except AzureHttpError:
+            pass

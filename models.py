@@ -1,10 +1,18 @@
 import re
 import logging
 import uuid
+import tempfile
+import os
+import pyqrcode
 from .mongodb import BasicEntry, BasicTable, EntryField, UpdateOps
 from .blob import FileStorage
+from .config import FB_PAGE_NAME
 
 MAX_CHID_CYPHERS = 9
+
+
+def _m_link(ref):
+    return 'http://m.me/' + FB_PAGE_NAME + '?ref=' + ref
 
 
 class Users(BasicTable):
@@ -49,6 +57,7 @@ class Channel(BasicEntry):
         EntryField('desc', ''),
         EntryField('subs', []),
         EntryField('messenger_code', ''),
+        EntryField('qr_code', ''),
     ]
 
     def _alloc_uchid(self):
@@ -108,6 +117,15 @@ class Channel(BasicEntry):
     def set_code(self, ref=None, messenger_code_url=None):
         assert self.oid
         opts = UpdateOps()
+        if ref:
+            url = pyqrcode.create(_m_link(ref), error='Q')
+            png_fname = os.path.join(tempfile.gettempdir(), self.uchid)
+            url.png(png_fname, scale=5)
+            FileStorage.upload(png_fname, 'qr-code', self.uchid,
+                               content_type='image/png')
+            os.remove(png_fname)
+            self.qr_code = FileStorage.get_url('qr-code', self.uchid)
+            opts.add(UpdateOps.Supported.SET, val={'qr_code': self.qr_code})
         if messenger_code_url:
             FileStorage.upload_from_url(messenger_code_url,
                                         'messenger-code',
@@ -147,6 +165,11 @@ class Channel(BasicEntry):
         else:
             logging.warning("U#%s: cannot unsubscribe user %s",
                             str(self.oid), str(uid))
+
+    def delete(self):
+        FileStorage.remove('qr-code', self.uchid)
+        FileStorage.remove('messenger-code', self.uchid)
+        super().delete()
 
 
 class Anncs(BasicTable):
