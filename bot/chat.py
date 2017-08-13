@@ -538,6 +538,7 @@ class BotChat(BaseStateMachine):
             self.annc.update_db(op=UpdateOps.Supported.SET,
                                 val={'text': self.annc.text})
             self.send_simple('SID_ANNC_DONE')
+            self.annc = None
             self.set_state('Root')
             Horn(self.page).notify(self.annc)
         else:
