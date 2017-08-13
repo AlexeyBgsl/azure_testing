@@ -363,6 +363,7 @@ class BotChat(BaseStateMachine):
             self.channel.update_db(op=UpdateOps.Supported.SET,
                                    val={'desc': self.channel.desc})
             self.send_simple('SID_CHANNEL_CREATED')
+            self.set_state('Root')
         else:
             self._state_handler_default(event=event)
 
