@@ -179,6 +179,66 @@ class BaseStateMachine(object):
 class BotChat(BaseStateMachine):
     REF_SUBSCRIBE_ACTION = 'sub'
 
+    class ChannelSelector(object):
+        MAX_LIST_ITEMS = 4
+        CHAN_ACTION_ID = 'Select'
+
+        @classmethod
+        def get_next_skip(cls, p):
+            return int(p.action_id) if p.action_id != cls.CHAN_ACTION_ID else None
+
+        @classmethod
+        def get_selected_channel(cls, p):
+            return p.channel
+
+        def __init__(self, state, channels=None, skip=None):
+            assert not channels or isinstance(channels, list)
+            assert not skip or isinstance(skip, int)
+            self.state = state
+            self.channels = channels if channels else []
+            self.skip = skip if skip else 0
+
+        @property
+        def is_done(self):
+            return len(self.channels) == self.skip
+
+        def next_message(self):
+            if self.is_done:
+                return None
+            nof_channels = len(self.channels)
+            max = self.skip + self.MAX_LIST_ITEMS
+            if nof_channels < max:
+                max = nof_channels
+            elements = []
+            for c in self.channels[self.skip:max]:
+                btn = \
+                    Template.ButtonPostBack("Select",
+                                            str(Payload(type='ClbQRep',
+                                                        state=self.state,
+                                                        action_id=self.CHAN_ACTION_ID,
+                                                        channel=c)))
+
+                elements.append(Template.GenericElement(c.name,
+                                                        subtitle=c.str_uchid + '\n' + c.desc,
+                                                        image_url=c.qr_code,
+                                                        buttons=[btn]))
+            buttons = None
+            if max != nof_channels:
+                buttons = [
+                    Template.ButtonPostBack("Next",
+                                            str(Payload(type='ClbQRep',
+                                                        state=self.state,
+                                                        action_id=str(max))))
+                ]
+
+            self.skip = max
+            if len(elements) == 1:
+                return Template.Generic(elements)
+            else:
+                return Template.GenericList(elements,
+                                            top_element_style='compact',
+                                            buttons=buttons)
+
     @classmethod
     def class_name(cls):
         return cls.__name__
@@ -203,23 +263,29 @@ class BotChat(BaseStateMachine):
         self.set_state(action_id)
 
     def _state_init_select_channel(self, subscribed):
-        ctas = CTAList(sm=self)
         if subscribed:
             channels = Channel.all_subscribed(uid=self.user.oid)
             msg_sid = 'SID_SELECT_SUB_PROMPT'
         else:
             channels = Channel.find(owner_uid=self.user.oid)
             msg_sid = 'SID_SELECT_CHANNEL_PROMPT'
-        for c in channels:
-            ctas.add(**{c.name: str(c.oid)})
-        self.send_simple(msg_sid=msg_sid, ctas=ctas)
+        selector = self.ChannelSelector(state=self._state,
+                                        channels=channels,
+                                        skip=getattr(self, 'skip', 0))
+        self.page.send(self.user.fbid, selector.next_message())
 
     def _state_handle_select_channel(self, event):
-        if not event.is_quick_reply:
+        if not event.is_postback:
             return False
-        p = Payload.from_string(event.quick_reply_payload)
-        self.channel = Channel.by_oid(p.action_id)
-        return True
+        p = Payload.from_string(event.postback_payload)
+        self.channel = self.ChannelSelector.get_selected_channel(p)
+        if self.channel:
+            return True
+        skip = self.ChannelSelector.get_next_skip(p)
+        if skip:
+            setattr(self, 'skip', skip)
+            return True
+        return False
 
     def _state_handler_edit_channel_field(self, fname, event):
         if not event.is_text_message:
@@ -373,8 +439,9 @@ class BotChat(BaseStateMachine):
 
     @BaseStateMachine.state_handler('EditChannel')
     def state_handler_edit_channel(self, event):
-        if self._state_handle_select_channel(event):
-            self.set_state('SelectEditChannelType')
+        if self._state_handle_select_channel(event=event):
+            if self.channel:
+                self.set_state('SelectEditChannelType')
         else:
             self._state_handler_default(event=event)
 
@@ -442,7 +509,8 @@ class BotChat(BaseStateMachine):
     @BaseStateMachine.state_handler('ListSubs')
     def state_handler_list_subs(self, event):
         if self._state_handle_select_channel(event=event):
-            self.set_state('SubSelectAction')
+            if self.channel:
+                self.set_state('SubSelectAction')
         else:
             self._state_handler_default(event=event)
 
@@ -505,8 +573,9 @@ class BotChat(BaseStateMachine):
 
     @BaseStateMachine.state_handler('AnncSelectChannel')
     def state_handler_annc_select_channel(self, event):
-        if self._state_handle_select_channel(event):
-            self.set_state('MakeAnnc')
+        if self._state_handle_select_channel(event=event):
+            if self.channel:
+                self.set_state('MakeAnnc')
         else:
             self._state_handler_default(event=event)
 
