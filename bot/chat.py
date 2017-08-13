@@ -1,8 +1,7 @@
 import logging
-from abc import ABC
 from fbmq import QuickReply, Template
 from bot.translations import BotString
-from db import Channel, Annc
+from db import Channel, Annc, UpdateOps
 from bot.horn import Horn
 
 
@@ -15,551 +14,82 @@ BotChatClbTypes = dict(
 
 class Payload(object):
     DELIMITER='/'
+    SUB_DELIMITER = ':'
 
     @classmethod
     def from_string(cls, payload):
         params = payload.split(cls.DELIMITER)
 
         for k, v in BotChatClbTypes.items():
-            if params[0] == v and len(params) > 2:
-                param = params[3] if len(params) > 3 else None
-                return cls(k, params[1], params[2], param)
+            if params[0] == v and 3 <= len(params) <= 4:
+                channel = None
+                annc = None
+                if len(params) == 4:
+                    p = params[3].split(cls.SUB_DELIMITER)
+                    if p[0] == 'ch':
+                        channel = Channel.by_oid(p[1])
+                    elif p[0] == 'an':
+                        annc = Annc.by_oid(p[1])
+                        channel = Channel.by_oid(annc.chid)
+                return cls(k, params[1], params[2], channel=channel, annc=annc)
 
         return None
 
-    def __init__(self, type, class_name, action_id, param=None):
-        if not class_name or not type or not action_id:
+    def __init__(self, type, state, action_id, channel=None, annc=None):
+        if not type or not action_id or not state:
             raise ValueError(
                 "{}: all fields are mandatory".format(self.__name__))
-        self.class_name = class_name
         self.type = type
+        self.state = state
         self.action_id = action_id
-        self.param = param
+        self.channel = channel
+        self.annc = annc
 
     def __str__(self):
         s = BotChatClbTypes[self.type] + self.DELIMITER + \
-            self.class_name + self.DELIMITER + self.action_id
-        if self.param:
-            s = s + self.DELIMITER + self.param
+            self.state + self.DELIMITER + self.action_id
+        if self.annc:
+            s = s + self.DELIMITER +\
+                'an' + self.SUB_DELIMITER + str(self.annc.oid)
+        elif self.channel:
+            s = s + self.DELIMITER +\
+                'ch' + self.SUB_DELIMITER + str(self.channel.oid)
         return s
 
 
-class ClassCollection(object):
-    def __init__(self):
-        self.subs = {}
+class CTAList(object):
+    class CTA(object):
+        def __init__(self, sid, action_id):
+            self.sid = sid
+            self.action_id = action_id
 
-    def register(self, scls):
-        self.subs[scls.__name__] = scls
-        return scls
+    def __init__(self, sm, **kwargs):
+        self.ctas = []
+        self.sm = sm
+        self.add(**kwargs)
 
-    def cls(self, class_name):
-        return self.subs[class_name] if class_name in self.subs else None
-
-    def instantiate(self, class_name, *args, **kwargs):
-        scls = self.cls(class_name)
-        return scls(*args, **kwargs) if scls else None
-
-
-class CallToAction(object):
-    def __init__(self, title_sid, class_name, action_id=None, cond=None):
-        self.title_sid = title_sid
-        self.class_name = class_name
-        self.action_id = action_id if action_id else class_name
-        self.cond = cond
-
-    def title(self, user=None):
-        return str(BotString(self.title_sid, user=user))
-
-
-class NoCallToAction(CallToAction):
-    CLS_NAME = 'NotImplementedChatState'
-
-    def __init__(self, title_sid):
-        super().__init__(title_sid, self.CLS_NAME)
-
-
-class HandlerResult():
-    def __init__(self, next_cls_name, **kwargs):
-        self.next_cls_name = next_cls_name
-        self.extra_args = kwargs
-
-
-class BasicChatState(ABC):
-    QREP_CTA = []
-    MSG_STR_ID = None
-    USER_INPUT = False
-
-    @classmethod
-    def class_name(cls):
-        return cls.__name__
-
-    def payload(self, type, action_id):
-        p = Payload(type, self.class_name(), action_id, param=self._to_param())
-        return str(p)
+    def add(self, **kwargs):
+        for k in kwargs:
+            self.ctas.append(CTAList.CTA(sid=k, action_id=kwargs[k]))
 
     @property
-    def _channel(self):
-        return Channel.by_oid(self.chid) if self.chid else None
-
-    @property
-    def _announcement(self):
-        return Annc.by_oid(self.aid) if self.aid else None
-
-    def _prepare_qreps(self):
+    def quick_replies(self):
         qreps = []
-        for cta in self.QREP_CTA:
-            if cta.cond and not cta.cond(self, cta):
-                continue
-            p = self.payload('ClbQRep', cta.action_id)
-            qreps.append(QuickReply(cta.title(self.user), p))
-        return qreps if len(qreps) else None
-
-    def _send(self, sid, with_qreps=False):
-        qreps = None
-        if with_qreps:
-            qreps = self._prepare_qreps()
-            if qreps and not len(qreps):
-                logging.warning("%s: empty QREPS generated", self.class_name())
-                qreps = None
-        message = str(BotString(sid, user=self.user, channel=self._channel))
-        self.page.send(self.user.fbid, message, quick_replies=qreps)
-
-    def _to_param(self):
-        if self.aid:
-            return 'A' + self.aid
-        if self.chid:
-            return 'C' + self.chid
-        return None
-
-    def _from_param(self, param):
-        if param:
-            if param[0] == 'A':
-                self.aid = param[1:]
-                self.chid = self._announcement.chid
-            elif param[0] == 'C':
-                self.chid = param[1:]
-
-    def _register_for_user_input(self):
-        p = self.payload('ClbMsg', 'UsrInput')
-        self.page.register_for_message(self.user, p)
-
-    def __init__(self, page, user, chid=None, aid=None):
-        self.page = page
-        self.user = user
-        if aid:
-            self.aid = aid
-            self.chid = self._announcement.chid
-        else:
-            self.aid = None
-            self.chid = chid
-
-    def _get_show_sid(self):
-        return self.MSG_STR_ID
-
-    def show(self):
-        if self.USER_INPUT:
-            self._register_for_user_input()
-        sid = self._get_show_sid()
-        if sid:
-            self._send(sid, with_qreps=True)
-
-    def done(self, sid):
-        self._send(sid=sid)
-        return HandlerResult('IdleChatState')
-
-    def reinstantiate(self):
-        self._send('SID_DONT_UNDERSTAND', with_qreps=False)
-        return HandlerResult(self.class_name(), chid=self.chid)
-
-    def on_user_input(self, event):
-        return None
-
-    def on_quick_response(self, action_id, event):
-        for cta in self.QREP_CTA:
-            if cta.action_id == action_id:
-                logging.debug("%s: next CTA: %s",
-                              self.class_name(), cta.class_name)
-                return HandlerResult(cta.class_name, chid=self.chid)
-        return None
-
-    def on_action(self, type, action_id, param, event):
-        self._from_param(param)
-        logging.debug("%s: on_action(%s): %s arrived",
-                      self.class_name(), type, action_id)
-        if type == 'ClbQRep':
-            logging.debug("[U#%s] on_quick_response(%s)",
-                          event.sender_id, action_id)
-            return self.on_quick_response(action_id, event)
-        elif type == 'ClbMsg':
-            assert action_id == 'UsrInput'
-            logging.debug("[U#%s] on_user_input(%s)",
-                          event.sender_id,
-                          event.message_text if event.is_text_message else '')
-            return self.on_user_input(event)
-        else:
-            logging.warning("%s: on_action(%s): unknown type",
-                            self.class_name(), type)
-
-        return None
-
-
-step_collection = ClassCollection()
-
-
-@step_collection.register
-class RootChatState(BasicChatState):
-    QREP_CTA = [
-        CallToAction('SID_BROWSE_CHANNELS', 'BrowseChannelsChatState'),
-        CallToAction('SID_MY_CHANNELS', 'MyChannelsChatState'),
-        CallToAction('SID_MY_SUBSCRIPTIONS', 'RootSubscriptionsChatState'),
-        CallToAction('SID_MAKE_ANNOUNCEMENT', 'MakeAnncChatState'),
-    ]
-    MSG_STR_ID = 'SID_ROOT_PROMPT'
-
-
-@step_collection.register
-class IdleChatState(RootChatState):
-    MSG_STR_ID = 'SID_IDLE_PROMPT'
-
-
-@step_collection.register
-class NotImplementedChatState(RootChatState):
-    MSG_STR_ID = 'SID_DBG_NO_ACTION'
-
-
-@step_collection.register
-class RootChannelsChatState(BasicChatState):
-    QREP_CTA = [
-        CallToAction('SID_BROWSE_CHANNELS', 'BrowseChannelsChatState'),
-        CallToAction('SID_MY_CHANNELS', 'MyChannelsChatState'),
-        CallToAction('SID_CHANNELS_HELP',  'ChannelsHelpChatState'),
-    ]
-    MSG_STR_ID = 'SID_CHANNELS_PROMPT'
-
-
-@step_collection.register
-class ChannelsHelpChatState(BasicChatState):
-    QREP_CTA = [
-        NoCallToAction('SID_HELP_CHANNEL_DETAILS'),
-        NoCallToAction('SID_HELP_CHANNEL_EXAMPLES')
-    ]
-    MSG_STR_ID = 'SID_HELP_CHANNELS_PROMPT'
-
-
-@step_collection.register
-class BrowseChannelsChatState(BasicChatState):
-    QREP_CTA = [
-        NoCallToAction('SID_BROWSE_NEWS_CHANNELS'),
-        NoCallToAction('SID_BROWSE_ENTERTAINMENT_CHANNELS'),
-        NoCallToAction('SID_BROWSE_SPORT_CHANNELS'),
-        NoCallToAction('SID_BROWSE_CULTURE_CHANNELS'),
-        NoCallToAction('SID_BROWSE_LOCAL_CHANNELS'),
-    ]
-    MSG_STR_ID = 'SID_BROWSE_CHANNELS_PROMPT'
-
-
-def _edit_chan_root_cond(state, cts):
-    return state.has_channels
-
-
-@step_collection.register
-class MyChannelsChatState(BasicChatState):
-    QREP_CTA = [
-        CallToAction('SID_CREATE_CHANNEL', 'CreateChannelsChatState'),
-        CallToAction('SID_EDIT_CHANNEL', 'EditChannelRootChatState',
-                     cond=_edit_chan_root_cond),
-    ]
-    MSG_STR_ID = 'SID_MY_CHANNELS_PROMPT'
-
-    def show(self):
-        self.has_channels = (len(Channel.find(owner_uid=self.user.oid)) != 0)
-        super().show()
-
-
-@step_collection.register
-class CreateChannelsChatState(BasicChatState):
-    MSG_STR_ID = 'SID_GET_CHANNEL_NAME'
-    USER_INPUT = True
-
-    def create_channel(self, name):
-        c = Channel.create(name=name, owner_uid=self.user.oid)
-        r = BotRef(sub=c.uchid)
-        mc = self.page.get_messenger_code(ref=r.ref)
-        c.set_code(ref=r.ref, messenger_code_url=mc)
-        return c
-
-    def on_user_input(self, event):
-        if event.is_text_message:
-            logging.debug("[U#%s] Desired channel name is: %s",
-                          event.sender_id, event.message_text)
-            c = self.create_channel(event.message_text)
-            return HandlerResult('GetChannelDescChatState', chid=str(c.oid))
-
-        return self.reinstantiate()
-
-
-@step_collection.register
-class GetChannelDescChatState(BasicChatState):
-    MSG_STR_ID = 'SID_GET_CHANNEL_DESC'
-    USER_INPUT = True
-
-    def on_user_input(self, event):
-        assert self.chid
-        if event.is_text_message:
-            c = self._channel
-            logging.debug("[U#%s] Desired %s channel desc is: %s",
-                          event.sender_id, c.oid, event.message_text)
-            c.desc = event.message_text
-            c.save()
-            return self.done('SID_CHANNEL_CREATED')
-
-        return self.reinstantiate()
-
-
-class SelectChannelChatState(BasicChatState):
-    MSG_STR_ID = 'SID_SELECT_CHANNEL_PROMPT'
-    USER_INPUT = True
-    NEXT_CLS_NAME = None
-
-    def _prepare_qreps(self):
-        channels = Channel.find(owner_uid=self.user.oid)
-        qreps = []
-        for c in channels:
-            p = self.payload('ClbQRep', str(c.oid))
-            qreps.append(QuickReply(c.name, p))
-        return qreps
-
-    def on_quick_response(self, action_id, event):
-        c = Channel.by_oid(action_id)
-        if c:
-            return HandlerResult(self.NEXT_CLS_NAME, chid=str(c.oid))
-
-        return self.reinstantiate()
-
-    def on_user_input(self, event):
-        if event.is_text_message:
-            c = Channel.by_chid_str(event.message_text)
-            if c:
-                return HandlerResult(self.NEXT_CLS_NAME, chid=str(c.oid))
-
-        return self.reinstantiate()
-
-
-@step_collection.register
-class EditChannelRootChatState(SelectChannelChatState):
-    NEXT_CLS_NAME = 'EditChannelTypeChatState'
-
-
-@step_collection.register
-class EditChannelTypeChatState(BasicChatState):
-    QREP_CTA = [
-        CallToAction('SID_EDIT_CHANNEL_NAME', 'EditChannelNameChatState'),
-        CallToAction('SID_EDIT_CHANNEL_DESC', 'EditChannelDescChatState'),
-        CallToAction('SID_EDIT_CHANNEL_DELETE', 'DeleteChannelChatState'),
-    ]
-    MSG_STR_ID = 'SID_SELECT_CHANNEL_EDIT_ACTION'
-
-
-@step_collection.register
-class EditChannelNameChatState(BasicChatState):
-    MSG_STR_ID = 'SID_EDIT_CHANNEL_NAME_PROMPT'
-    USER_INPUT = True
-
-    def on_user_input(self, event):
-        if event.is_text_message:
-            c = self._channel
-            c.name = event.message_text.strip()
-            c.save()
-            return self.done('SID_CHANNEL_NAME_CHANGED')
-
-        return self.reinstantiate()
-
-
-@step_collection.register
-class EditChannelDescChatState(BasicChatState):
-    MSG_STR_ID = 'SID_EDIT_CHANNEL_DESC_PROMPT'
-    USER_INPUT = True
-
-    def on_user_input(self, event):
-        if event.is_text_message:
-            c = self._channel
-            c.desc = event.message_text.strip()
-            c.save()
-            return self.done('SID_CHANNEL_DESC_CHANGED')
-
-        return self.reinstantiate()
-
-
-@step_collection.register
-class DeleteChannelChatState(BasicChatState):
-    MSG_STR_ID = 'SID_DEL_CHANNEL_PROMPT'
-    QREP_CTA = [
-        CallToAction('SID_YES', 'YesPseudoChatState'),
-        CallToAction('SID_NO', 'NoPseudoChatState'),
-    ]
-
-    def on_quick_response(self, action_id, event):
-        if action_id == 'YesPseudoChatState':
-            c = self._channel
-            if c:
-                c.delete()
-                return self.done('SID_CHANNEL_REMOVED')
+        for cta in self.ctas:
+            p = Payload(type='ClbQRep',
+                        state=self.sm._state,
+                        action_id=cta.action_id,
+                        channel=self.sm.channel,
+                        annc = self.sm.annc)
+            if cta.sid.startswith('SID_'):
+               title = str(BotString(cta.sid,
+                                     user=self.sm.user,
+                                     channel=self.sm.channel,
+                                     annc=self.sm.annc))
             else:
-                logging.warning("[U#%s] cannot remove nonexistent channel %s",
-                                event.sender_id, self.chid)
-
-        if  action_id == 'NoPseudoChatState':
-            return self.done('SID_CHANNEL_UNCHANGED')
-
-        return self.reinstantiate()
-
-
-def _subs_list_cond(state, cts):
-    return len(state.subs) != 0
-
-
-@step_collection.register
-class RootSubscriptionsChatState(BasicChatState):
-    QREP_CTA = [
-        CallToAction('SID_LIST_SUBSCRIPTIONS', 'SubsListChatState',
-                     cond=_subs_list_cond),
-        CallToAction('SID_ADD_SUBSCRIPTION', 'SubAddChatState'),
-    ]
-    MSG_STR_ID = 'SID_SUBSCRIPTIONS_PROMPT'
-
-    def show(self):
-        self.subs = Channel.all_subscribed(self.user.oid)
-        super().show()
-
-
-@step_collection.register
-class SubsListChatState(BasicChatState):
-    MSG_STR_ID = 'SID_SELECT_SUB_PROMPT'
-
-    def _prepare_qreps(self):
-        qreps = None
-        subs = Channel.all_subscribed(self.user.oid)
-        if len(subs):
-            qreps = []
-            for c in subs:
-                p = self.payload('ClbQRep', str(c.oid))
-                qreps.append(QuickReply(c.name, p))
-        return qreps
-
-    def on_quick_response(self, action_id, event):
-        return HandlerResult('SubSelectActionState', chid=action_id)
-
-
-@step_collection.register
-class SubSelectActionState(BasicChatState):
-    QREP_CTA = [
-        CallToAction('SID_SUB_DELETE', 'SubDelChatState'),
-        NoCallToAction('SID_SUB_SHOW_ANNCS'),
-    ]
-    MSG_STR_ID = 'SID_SELECT_SUB_ACTION_PROMPT'
-
-
-@step_collection.register
-class SubDelChatState(BasicChatState):
-    MSG_STR_ID = 'SID_SUB_UNSUBSCRIBE_PROMPT'
-    QREP_CTA = [
-        CallToAction('SID_YES', 'YesPseudoChatState'),
-        CallToAction('SID_NO', 'NoPseudoChatState'),
-    ]
-
-    def on_quick_response(self, action_id, event):
-        if action_id == 'YesPseudoChatState':
-            self._channel.unsubscribe(self.user.oid)
-            return self.done('SID_SUB_REMOVED')
-
-        if  action_id == 'NoPseudoChatState':
-            return self.done('SID_SUB_UNCHANGED')
-
-        return self.reinstantiate()
-
-
-@step_collection.register
-class SubAddChatState(BasicChatState):
-    MSG_STR_ID = 'SID_ENTER_CHANNEL_ID_PROMPT'
-    USER_INPUT = True
-
-    def on_user_input(self, event):
-        if event.is_text_message:
-            c = Channel.by_uchid_str(event.message_text)
-            if c:
-                self.chid = c.oid
-                if self.user.oid in c.subs:
-                    return self.done('SID_SUB_EXISTS')
-                c.subscribe(self.user.oid)
-                if self.user.oid in c.subs:
-                    return self.done('SID_SUB_ADDED')
-                return self.done('SID_ERROR')
-
-        return self.reinstantiate()
-
-
-def _annc_select_chan_cond(state, cts):
-    return state.has_channels
-
-
-@step_collection.register
-class MakeAnncChatState(BasicChatState):
-    MSG_STR_ID = 'SID_ANNC_ROOT_PROMPT'
-    QREP_CTA = [
-        CallToAction('SID_ANNC_NEW_CHANNEL', 'CreateChannelsChatState'),
-        CallToAction('SID_ANNC_SELECT_CHANNEL', 'AnncSelectChannelChatState',
-                     cond=_annc_select_chan_cond),
-    ]
-
-    def _get_show_sid(self):
-        if self.has_channels:
-            return 'SID_ANNC_ROOT_PROMPT'
-        return 'SID_ANNC_CREATE_CHANNEL_PROMPT'
-
-    def show(self):
-        self.has_channels = (len(Channel.find(owner_uid=self.user.oid)) != 0)
-        super().show()
-
-
-@step_collection.register
-class AnncSelectChannelChatState(SelectChannelChatState):
-    NEXT_CLS_NAME = 'AnncGetTitleChatState'
-
-
-@step_collection.register
-class AnncGetTitleChatState(BasicChatState):
-    MSG_STR_ID = 'SID_ANNC_GET_TITLE_PROMPT'
-    USER_INPUT = True
-
-    def create_annc(self, title):
-        a = Annc(title=title, chid=self.chid, owner_uid=self.user.oid)
-        a.save()
-        return a
-
-    def on_user_input(self, event):
-        if event.is_text_message:
-            logging.debug("[U#%s] Desired annc title is: %s",
-                          event.sender_id, event.message_text)
-            a = self.create_annc(event.message_text)
-            return HandlerResult('AnncGetTextChatState', aid=str(a.oid))
-
-        return self.reinstantiate()
-
-
-@step_collection.register
-class AnncGetTextChatState(BasicChatState):
-    MSG_STR_ID = 'SID_ANNC_GET_TEXT_PROMPT'
-    USER_INPUT = True
-
-    def on_user_input(self, event):
-        if event.is_text_message:
-            a = self._announcement
-            a.text = event.message_text.strip()
-            a.save()
-            Horn(self.page).notify(a)
-            return self.done('SID_ANNC_DONE')
-
-        return self.reinstantiate()
+                title = cta.sid
+            qreps.append(QuickReply(title, str(p)))
+        return qreps if qreps else None
 
 
 class BotRef(object):
@@ -601,61 +131,451 @@ class BotRef(object):
         return self.ref
 
 
-class BotChat(object):
-    MENU_CTA = [
-        CallToAction('SID_MENU_ANNOUNCEMENTS', 'MakeAnncChatState'),
-        CallToAction('SID_MENU_CHANNELS', 'RootChannelsChatState'),
-        CallToAction('SID_MENU_SUBSCRIPTIONS', 'RootSubscriptionsChatState'),
-        CallToAction('SID_MENU_HELP', 'RootHelpChatState'),
-    ]
+class BaseStateMachine(object):
+    HANDLERS = dict()
+    INITIATORS = dict()
+
+    @classmethod
+    def state_initiator(cls, state):
+        def actual_decorator(func):
+            assert state not in cls.INITIATORS
+            cls.INITIATORS[state] = func
+        return actual_decorator
+
+    @classmethod
+    def state_handler(cls, state):
+        def actual_decorator(func):
+            assert state not in cls.HANDLERS
+            cls.HANDLERS[state] = func
+        return actual_decorator
+
+    def __init__(self, user=None, channel=None, annc=None, state=None):
+        self._state = None
+        self.user = user
+        self.channel = channel
+        self.annc = annc
+        if state:
+            self.set_state(state=state)
+
+    def call_initiator(self, **kwargs):
+        if self._state not in self.INITIATORS:
+            raise ValueError(
+                "State with no initiator: {}".format(self._state))
+        self.INITIATORS[self._state](self)
+
+    def call_handler(self, event):
+        if self._state not in self.HANDLERS:
+            raise ValueError(
+                "State with no handler: {}".format(self._state))
+        self.HANDLERS[self._state](self, event=event)
+
+    def set_state(self, state):
+        if state not in self.INITIATORS and state not in self.HANDLERS:
+            raise ValueError(
+                "Unknown State: {}".format(state))
+        self._state = state
+
+
+class BotChat(BaseStateMachine):
     REF_SUBSCRIBE_ACTION = 'sub'
 
     @classmethod
     def class_name(cls):
         return cls.__name__
 
+    def _register_for_user_input(self):
+        p = Payload(type='ClbMsg', state=self._state, action_id='UsrInput',
+                    channel=self.channel, annc=self.annc)
+        self.page.register_for_message(self.user, str(p))
+
+    def set_state(self, state):
+        if state != self._state:
+            super().set_state(state=state)
+            self._register_for_user_input()
+
+    def send_simple(self, msg_sid, ctas = None):
+        msg = str(BotString(msg_sid, user=self.user, channel=self.channel))
+        qreps = ctas.quick_replies if ctas else None
+        self.page.send(self.user.fbid, msg, quick_replies=qreps)
+
+    def on_qrep_simple(self, **kwargs):
+        action_id = kwargs.get('action_id', 'Root')
+        self.set_state(action_id)
+
+    def _state_init_select_channel(self, subscribed):
+        ctas = CTAList(sm=self)
+        if subscribed:
+            channels = Channel.all_subscribed(uid=self.user.oid)
+            msg_sid = 'SID_SELECT_SUB_PROMPT'
+        else:
+            channels = Channel.find(owner_uid=self.user.oid)
+            msg_sid = 'SID_SELECT_CHANNEL_PROMPT'
+        for c in channels:
+            ctas.add(**{c.name: str(c.oid)})
+        self.send_simple(msg_sid=msg_sid, ctas=ctas)
+
+    def _state_handle_select_channel(self, event):
+        if not event.is_quick_reply:
+            return False
+        p = Payload.from_string(event.quick_reply_payload)
+        self.channel = Channel.by_oid(p.action_id)
+        return True
+
+    def _state_handler_edit_channel_field(self, fname, event):
+        if not event.is_text_message:
+            return False
+        val = event.message_text.strip()
+        setattr(self.channel, fname, val)
+        self.channel.update_db(op=UpdateOps.Supported.SET,
+                               val={fname: val})
+        return True
+
+    def _state_handler_default(self, event):
+        if event.is_quick_reply:
+            p = Payload.from_string(event.quick_reply_payload)
+            self.set_state(p.action_id)
+        elif event.is_postback:
+            p = Payload.from_string(event.postback_payload)
+            self.set_state(p.action_id)
+        elif event.is_text_message:
+            pass
+        else:
+            pass
+
+    @BaseStateMachine.state_initiator('Root')
+    def state_init_root(self):
+        ctas = CTAList(sm=self,
+                       SID_BROWSE_CHANNELS='BrowseChannels',
+                       SID_MY_CHANNELS='MyChannels',
+                       SID_MY_SUBSCRIPTIONS='MySubscriptions',
+                       SID_MAKE_ANNOUNCEMENT='MakeAnnouncement')
+        self.send_simple('SID_ROOT_PROMPT', ctas)
+
+    @BaseStateMachine.state_handler('Root')
+    def state_handler_root(self, event):
+        self._state_handler_default(event=event)
+
+    @BaseStateMachine.state_initiator('Channels')
+    def state_init_channels(self):
+        ctas = CTAList(sm=self,
+                       SID_BROWSE_CHANNELS='BrowseChannels',
+                       SID_MY_CHANNELS='MyChannels',
+                       SID_CHANNELS_HELP='ChannelsHelp')
+        self.send_simple('SID_CHANNELS_PROMPT', ctas)
+
+    @BaseStateMachine.state_initiator('BrowseChannels')
+    def state_init_browse_channels(self):
+        ctas = CTAList(sm=self,
+                       SID_BROWSE_NEWS_CHANNELS='Root',
+                       SID_BROWSE_ENTERTAINMENT_CHANNELS='Root',
+                       SID_BROWSE_SPORT_CHANNELS='Root',
+                       SID_BROWSE_CULTURE_CHANNELS='Root',
+                       SID_BROWSE_LOCAL_CHANNELS='Root')
+        self.send_simple('SID_BROWSE_CHANNELS_PROMPT', ctas)
+
+    @BaseStateMachine.state_handler('BrowseChannels')
+    def state_handler_browse_channels(self, event):
+        self.send_simple('SID_DBG_NO_ACTION')
+        self._state_handler_default(event=event)
+
+    @BaseStateMachine.state_initiator('MyChannels')
+    def state_init_my_channels(self):
+        channels = Channel.find(owner_uid=self.user.oid)
+        ctas = CTAList(sm=self,
+                       SID_CREATE_CHANNEL='CreateChannel')
+        if len(channels):
+            ctas.add(SID_EDIT_CHANNEL='EditChannel')
+        self.send_simple('SID_MY_CHANNELS_PROMPT', ctas)
+
+    @BaseStateMachine.state_handler('MyChannels')
+    def state_handle_my_channels(self, event):
+        self._state_handler_default(event=event)
+
+    @BaseStateMachine.state_initiator('ChannelsHelp')
+    def state_init_channels_help(self):
+        self.send_simple('SID_DBG_NO_ACTION')
+
+    @BaseStateMachine.state_handler('ChannelsHelp')
+    def state_handler_channels_help(self, event):
+        self._state_handler_default(event=event)
+
+    @BaseStateMachine.state_initiator('MySubscriptions')
+    def state_init_my_subscriptions(self):
+        subs = Channel.all_subscribed(self.user.oid)
+        ctas = CTAList(sm=self,
+                       SID_ADD_SUBSCRIPTION='AddSub')
+        if len(subs):
+            ctas.add(SID_LIST_SUBSCRIPTIONS='ListSubs')
+        self.send_simple('SID_SUBSCRIPTIONS_PROMPT', ctas)
+
+    @BaseStateMachine.state_handler('MySubscriptions')
+    def state_handler_my_subscriptions(self, event):
+        self._state_handler_default(event=event)
+
+    @BaseStateMachine.state_initiator('MakeAnnouncement')
+    def state_init_make_annc(self):
+        channels = Channel.find(owner_uid=self.user.oid)
+        ctas = CTAList(sm=self,
+                       SID_ANNC_NEW_CHANNEL='CreateChannel')
+        if len(channels):
+            ctas.add(SID_ANNC_SELECT_CHANNEL='AnncSelectChannel')
+            msg_sid = 'SID_ANNC_ROOT_PROMPT'
+        else:
+            msg_sid = 'SID_ANNC_CREATE_CHANNEL_PROMPT'
+        self.send_simple(msg_sid=msg_sid, ctas=ctas)
+
+    @BaseStateMachine.state_handler('MakeAnnouncement')
+    def state_handler_make_annc(self, event):
+        self._state_handler_default(event=event)
+
+    @BaseStateMachine.state_initiator('CreateChannel')
+    def state_init_create_channel(self):
+        self.send_simple('SID_GET_CHANNEL_NAME')
+
+    @BaseStateMachine.state_handler('CreateChannel')
+    def state_handler_create_channel(self, event):
+        if event.is_text_message:
+            logging.debug("[U#%s] Desired channel name is: %s",
+                          event.sender_id, event.message_text)
+            c = Channel.create(name=event.message_text,
+                               owner_uid=self.user.oid)
+            r = BotRef(sub=c.uchid)
+            mc = self.page.get_messenger_code(ref=r.ref)
+            c.set_code(ref=r.ref, messenger_code_url=mc)
+            self.channel = c
+            self.set_state('SetChannelDesc')
+        else:
+            self._state_handler_default(event=event)
+
+
+    @BaseStateMachine.state_initiator('SetChannelDesc')
+    def state_init_set_channel_desc(self):
+        self.send_simple('SID_GET_CHANNEL_DESC')
+        pass
+
+    @BaseStateMachine.state_handler('SetChannelDesc')
+    def state_handler_set_channel_desc(self, event):
+        assert self.channel
+        if event.is_text_message:
+            logging.debug("[U#%s] Desired %s channel desc is: %s",
+                          event.sender_id, self.channel.oid, event.message_text)
+            self.channel.desc = event.message_text
+            self.channel.update_db(op=UpdateOps.Supported.SET,
+                                   val={'desc': self.channel.desc})
+            self.send_simple('SID_CHANNEL_CREATED')
+        else:
+            self._state_handler_default(event=event)
+
+    @BaseStateMachine.state_initiator('EditChannel')
+    def state_init_edit_channel(self):
+        self._state_init_select_channel(subscribed=False)
+
+    @BaseStateMachine.state_handler('EditChannel')
+    def state_handler_edit_channel(self, event):
+        if self._state_handle_select_channel(event):
+            self.set_state('SelectEditChannelType')
+        else:
+            self._state_handler_default(event=event)
+
+    @BaseStateMachine.state_initiator('SelectEditChannelType')
+    def state_init_select_edit_channel_type(self):
+        ctas = CTAList(sm=self,
+                       SID_EDIT_CHANNEL_NAME='EditChannelName',
+                       SID_EDIT_CHANNEL_DESC='EditChannelDesc',
+                       SID_EDIT_CHANNEL_DELETE='DeleteChannel')
+        self.send_simple('SID_SELECT_CHANNEL_EDIT_ACTION', ctas)
+
+    @BaseStateMachine.state_handler('SelectEditChannelType')
+    def state_handler_select_edit_channel_type(self, event):
+        self._state_handler_default(event=event)
+
+    @BaseStateMachine.state_initiator('EditChannelName')
+    def state_init_edit_channel_name(self):
+        self.send_simple('SID_EDIT_CHANNEL_NAME_PROMPT')
+
+    @BaseStateMachine.state_handler('EditChannelName')
+    def state_handler_edit_channel_name(self, event):
+        if self._state_handler_edit_channel_field(fname='name', event=event):
+            self.send_simple('SID_CHANNEL_NAME_CHANGED')
+            self.set_state('Root')
+        else:
+            self._state_handler_default(event=event)
+
+    @BaseStateMachine.state_initiator('EditChannelDesc')
+    def state_init_edit_channel_name(self):
+        self.send_simple('SID_EDIT_CHANNEL_DESC_PROMPT')
+
+    @BaseStateMachine.state_handler('EditChannelDesc')
+    def state_handler_edit_channel_name(self, event):
+        if self._state_handler_edit_channel_field(fname='desc', event=event):
+            self.send_simple('SID_CHANNEL_DESC_CHANGED')
+            self.set_state('Root')
+        else:
+            self._state_handler_default(event=event)
+
+    @BaseStateMachine.state_initiator('DeleteChannel')
+    def state_init_delete_channel(self):
+        ctas = CTAList(sm=self,
+                       SID_YES='YesPseudoChatState',
+                       SID_NO='NoPseudoChatState')
+        self.send_simple('SID_DEL_CHANNEL_PROMPT', ctas)
+
+    @BaseStateMachine.state_handler('DeleteChannel')
+    def state_handler_delete_channel(self, event):
+        if event.is_quick_reply:
+            p = Payload.from_string(event.quick_reply_payload)
+            if p.action_id == 'YesPseudoChatState':
+                self.channel.delete()
+                self.channel = None
+                self.send_simple('SID_CHANNEL_REMOVED')
+            else:
+                self.send_simple('SID_CHANNEL_UNCHANGED')
+            self.set_state('Root')
+        else:
+             self._state_handler_default(event=event)
+
+    @BaseStateMachine.state_initiator('ListSubs')
+    def state_init_list_subs(self):
+        self._state_init_select_channel(subscribed=True)
+
+    @BaseStateMachine.state_handler('ListSubs')
+    def state_handler_list_subs(self, event):
+        if self._state_handle_select_channel(event=event):
+            self.set_state('SubSelectAction')
+        else:
+            self._state_handler_default(event=event)
+
+    @BaseStateMachine.state_initiator('AddSub')
+    def state_init_add_sub(self):
+        self.send_simple('SID_ENTER_CHANNEL_ID_PROMPT')
+
+    @BaseStateMachine.state_handler('AddSub')
+    def state_handler_add_sub(self, event):
+        if event.is_text_message:
+            logging.debug("[U#%s] Desired uchid is: %s",
+                          event.sender_id, event.message_text)
+            self.channel = Channel.by_uchid_str(event.message_text)
+            if self.channel:
+                if self.user.oid in self.channel.subs:
+                    self.send_simple('SID_SUB_EXISTS')
+                else:
+                    self.channel.subscribe(self.user.oid)
+                    if self.user.oid in self.channel.subs:
+                        self.send_simple('SID_SUB_ADDED')
+                        self.set_state('Root')
+                    else:
+                        self.send_simple('SID_ERROR')
+
+    @BaseStateMachine.state_initiator('SubSelectAction')
+    def state_init_sub_select_action(self):
+        ctas = CTAList(sm=self,
+                       SID_SUB_DELETE='DelSub',
+                       SID_SUB_SHOW_ANNCS='Root')
+        self.send_simple('SID_SELECT_SUB_ACTION_PROMPT', ctas)
+
+    @BaseStateMachine.state_handler('SubSelectAction')
+    def state_handler_sub_select_action(self, event):
+        self._state_handler_default(event=event)
+
+    @BaseStateMachine.state_initiator('DelSub')
+    def state_init_del_sub(self):
+        ctas = CTAList(sm=self,
+                       SID_YES='YesPseudoChatState',
+                       SID_NO='NoPseudoChatState')
+        self.send_simple('SID_SUB_UNSUBSCRIBE_PROMPT', ctas)
+
+    @BaseStateMachine.state_handler('DelSubs')
+    def state_handler_del_sub(self, event):
+        if event.is_quick_reply:
+            p = Payload.from_string(event.quick_reply_payload)
+            if p.action_id == 'YesPseudoChatState':
+                self.channel.unsubscribe(self.user.oid)
+                self.channel = None
+                self.send_simple('SID_SUB_REMOVED')
+            else:
+                self.send_simple('SID_SUB_UNCHANGED')
+            self.set_state('Root')
+        else:
+             self._state_handler_default(event=event)
+
+    @BaseStateMachine.state_initiator('AnncSelectChannel')
+    def state_init_annc_select_channel(self):
+        self._state_init_select_channel(subscribed=False)
+
+    @BaseStateMachine.state_handler('AnncSelectChannel')
+    def state_handler_annc_select_channel(self, event):
+        if self._state_handle_select_channel(event):
+            self.set_state('MakeAnnc')
+        else:
+            self._state_handler_default(event=event)
+
+    @BaseStateMachine.state_initiator('MakeAnnc')
+    def state_init_make_annc(self):
+        self.send_simple('SID_ANNC_GET_TITLE_PROMPT')
+
+    @BaseStateMachine.state_handler('MakeAnnc')
+    def state_handler_make_annc(self, event):
+        if event.is_text_message:
+            logging.debug("[U#%s] Desired annc title is: %s",
+                          event.sender_id, event.message_text)
+            self.annc = Annc(title=event.message_text,
+                             chid=self.channel.oid,
+                             owner_uid=self.user.oid)
+            self.annc.save()
+            self.set_state('SetAnncText')
+        else:
+            self._state_handler_default(event=event)
+
+    @BaseStateMachine.state_initiator('SetAnncText')
+    def state_init_set_annc_text(self):
+        self.send_simple('SID_ANNC_GET_TEXT_PROMPT')
+
+    @BaseStateMachine.state_handler('SetAnncText')
+    def state_handler_set_annc_text(self, event):
+        if event.is_text_message:
+            self.annc.text = event.message_text.strip()
+            self.annc.update_db(op=UpdateOps.Supported.SET,
+                                val={'text': self.annc.text})
+            self.send_simple('SID_ANNC_DONE')
+            self.set_state('Root')
+            Horn(self.page).notify(self.annc)
+        else:
+            self._state_handler_default(event=event)
+
     @classmethod
     def clb_by_payload(cls, user, page, payload, event):
-        logging.debug("[U#%s] clb arrived: %s",
-                      event.sender_id, payload)
         p = Payload.from_string(payload)
         if p:
-            cls(page, user, scls_name=p.class_name).on_action(p.type,
-                                                              p.action_id,
-                                                              p.param,
-                                                              event)
+            logging.debug("[U#%s] clb arrived: %s (type=%s)",
+                          event.sender_id, payload, p.type)
+            sm = cls(page=page, user=user, state= p.state,
+                     channel=p.channel, annc=p.annc)
+            sm.on_action(event)
         else:
             logging.warning("[U#%s] clb: bad payload: %s",
                             event.sender_id, payload)
 
     @classmethod
     def get_menu_buttons(cls):
+        menu_items = dict(
+            SID_MENU_ANNOUNCEMENTS='MakeAnnouncement',
+            SID_MENU_CHANNELS='MyChannels',
+            SID_MENU_SUBSCRIPTIONS='MySubscriptions',
+            SID_MENU_HELP='Help'
+        )
         buttons = []
-        for cta in cls.MENU_CTA:
-            p = Payload('ClbMenu', cls.class_name(), cta.action_id)
-            buttons.append(Template.ButtonPostBack(cta.title(), str(p)))
+        for k in menu_items:
+            p = Payload(type='ClbMenu', state='Root', action_id=menu_items[k])
+            btn = Template.ButtonPostBack(str(BotString(k)), str(p))
+            buttons.append(btn)
         return buttons
 
-    def _on_menu(self, action_id, event):
-        for cta in self.MENU_CTA:
-            if cta.action_id == action_id:
-                logging.debug("%s: next CTA: %s",
-                              self.class_name(), cta.class_name)
-                return HandlerResult(cta.class_name)
-        return None
+    def _on_menu(self, event):
+        self._state_handler_default(event=event)
 
-    def __init__(self, page, user, scls_name=None):
+    def __init__(self, page, user, state='Root', channel=None, annc=None):
         self.page = page
-        self.user = user
-        if not scls_name:
-            scls_name = 'RootChatState'
-        self.instantiate_state(HandlerResult(scls_name))
-
-    def instantiate_state(self, result):
-        self.state = step_collection.instantiate(result.next_cls_name,
-                                                 self.page,
-                                                 self.user,
-                                                 **result.extra_args)
+        super().__init__(user=user, state=state, channel=channel, annc=annc)
 
     def start(self, event):
         if event.is_postback_referral:
@@ -663,7 +583,7 @@ class BotChat(object):
                           event.postback_referral,
                           event.postback_referral_ref)
             self.on_ref(event.postback_referral_ref)
-        self.state.show()
+        self.call_initiator()
 
     def on_referral(self, event):
         logging.debug("[U#%s] ref: %s, %s", event.sender_id,
@@ -671,16 +591,9 @@ class BotChat(object):
                           event.referral_ref)
         self.on_ref(event.referral_ref)
 
-    def on_action(self, type, action_id, param, event):
-        logging.debug("%s: on_action(%s): %s arrived",
-                      self.class_name(), type, action_id)
-        if type == 'ClbMenu':
-            result = self._on_menu(action_id, event)
-        else:
-            result = self.state.on_action(type, action_id, param, event)
-        if result:
-            self.instantiate_state(result)
-            self.state.show()
+    def on_action(self, event):
+        self.call_handler(event)
+        self.call_initiator()
 
     def on_ref(self, ref):
         r = BotRef(ref=ref)
