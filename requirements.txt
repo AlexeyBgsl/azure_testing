@@ -1,5 +1,5 @@
 Flask
-fbmq
+-e git+https://github.com/anton-nayshtut/fbmq.git#egg=fbmq
 pymongo
 azure-storage
 pyqrcode
