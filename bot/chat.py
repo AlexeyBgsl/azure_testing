@@ -77,7 +77,7 @@ class CTAList(object):
         qreps = []
         for cta in self.ctas:
             p = Payload(type='ClbQRep',
-                        state=self.sm._state,
+                        state=self.sm.state,
                         action_id=cta.action_id,
                         channel=self.sm.channel,
                         annc = self.sm.annc)
@@ -175,6 +175,10 @@ class BaseStateMachine(object):
                 "Unknown State: {}".format(state))
         self._state = state
 
+    @property
+    def state(self):
+        return self._state
+
 
 class BotChat(BaseStateMachine):
     REF_SUBSCRIBE_ACTION = 'sub'
@@ -244,12 +248,12 @@ class BotChat(BaseStateMachine):
         return cls.__name__
 
     def _register_for_user_input(self):
-        p = Payload(type='ClbMsg', state=self._state, action_id='UsrInput',
+        p = Payload(type='ClbMsg', state=self.state, action_id='UsrInput',
                     channel=self.channel, annc=self.annc)
         self.page.register_for_message(self.user, str(p))
 
     def set_state(self, state):
-        if state != self._state:
+        if state != self.state:
             super().set_state(state=state)
             self._register_for_user_input()
 
@@ -269,7 +273,7 @@ class BotChat(BaseStateMachine):
         else:
             channels = Channel.find(owner_uid=self.user.oid)
             msg_sid = 'SID_SELECT_CHANNEL_PROMPT'
-        selector = self.ChannelSelector(state=self._state,
+        selector = self.ChannelSelector(state=self.state,
                                         channels=channels,
                                         skip=getattr(self, 'skip', 0))
         self.page.send(self.user.fbid, selector.next_message())
