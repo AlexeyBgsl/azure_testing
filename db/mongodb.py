@@ -63,7 +63,7 @@ class BasicEntry(ABC):
     @classmethod
     def find_unique(cls, **kwargs):
         e = cls.table.query_unique(**kwargs)
-        return cls(entity=e)
+        return cls(entity=e) if e else None
 
     def __add_db_property(self, name):
         if not name in self.db_fields:
