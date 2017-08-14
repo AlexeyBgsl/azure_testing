@@ -83,7 +83,9 @@ DefaultStrings = dict(
                       "Channel: $CHANNEL_NAME ($CHANNEL_ID)\n"\
                       "Title: $ANNC_TITLE\n\n"
                       "$ANNC_TEXT\n"),
-
+    SID_SELECT_THIS="Select",
+    SID_BACK="Back",
+    SID_NEXT="Next",
 )
 
 
