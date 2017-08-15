@@ -174,7 +174,7 @@ class Channel(BasicEntry):
 
 class Anncs(BasicTable):
     def __init__(self):
-        super().__init__(col_name="Channels")
+        super().__init__(col_name="Anncs")
 
 
 class Annc(BasicEntry):
