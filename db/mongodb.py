@@ -8,6 +8,13 @@ from .config import MONGODB_URI, MONGODB_DB
 OID_KEY=u'_id'
 
 
+def _adjust_mongodb_db_name(s):
+    # https://docs.mongodb.com/manual/reference/limits/#naming-restrictions
+    for c in '/\. "$*<>:|?':
+        s = s.replace(c, '-')
+    return s
+
+
 class EntryField(object):
     def __init__(self, name, val):
         self.name = name
@@ -132,7 +139,7 @@ class BasicEntry(ABC):
 
 class BasicTable(ABC):
     client = MongoClient(MONGODB_URI)
-    db = client[MONGODB_DB]
+    db = client[_adjust_mongodb_db_name(MONGODB_DB)]
 
     def __init__(self, col_name):
         self.collection = self.db[col_name]
