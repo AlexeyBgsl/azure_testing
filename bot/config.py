@@ -11,7 +11,6 @@ ACCESS_TOKEN_DBG = ('EAATBF61P4qoBAOxtLJqx75i2e04c2CUCpfTCiOTaJCuZA81ZAVf33icr'
                     'XOsDBpM8HgE3ZCfN9rv7spE9ZCfqIDnj2tM9Tb5ZAm9fb3l296ZAJQgIn'
                     'QlO2ltaF4uAwqQ')
 CONFIG = dict(
-    LOGFMT='[%(asctime)s] [%(name)s] [%(levelname)s] %(message)s',
     ACCESS_TOKEN='',
     VERIFY_TOKEN='loc@no',
     PROJECT_ID='locano-172715'
