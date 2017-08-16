@@ -2,7 +2,7 @@ import logging
 import fbmq
 import functools
 from bot.config import CONFIG
-from db import User, MsgHandler
+from db import User, MsgHandler, UpdateOps
 from bot.chat import (
     BotChatClbTypes,
     chat_clb_handler,
@@ -68,8 +68,7 @@ class BotPage(fbmq.Page):
                             user.fbid, user.fbmsgseq, message_seq)
             return False
 
-        user.fbmsgseq = message_seq
-        user.save()
+        user.update(UpdateOps.Supported.SET, fbmsgseq=message_seq)
         return True
 
     def create_or_update_user(self, fbid):

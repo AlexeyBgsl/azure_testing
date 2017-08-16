@@ -267,9 +267,7 @@ class BotChat(BaseStateMachine):
         if not event.is_text_message:
             return False
         val = event.message_text.strip()
-        setattr(self.channel, fname, val)
-        self.channel.update_db(op=UpdateOps.Supported.SET,
-                               val={fname: val})
+        self.channel.update(op=UpdateOps.Supported.SET,**{fname: val})
         return True
 
     def _state_handler_default(self, event):
@@ -398,12 +396,9 @@ class BotChat(BaseStateMachine):
     @BaseStateMachine.state_handler('SetChannelDesc')
     def state_handler_set_channel_desc(self, event):
         assert self.channel
-        if event.is_text_message:
+        if self._state_handler_edit_channel_field(fname='desc', event=event):
             logging.debug("[U#%s] Desired %s channel desc is: %s",
-                          event.sender_id, self.channel.oid, event.message_text)
-            self.channel.desc = event.message_text
-            self.channel.update_db(op=UpdateOps.Supported.SET,
-                                   val={'desc': self.channel.desc})
+                          event.sender_id, self.channel.oid, self.channel.desc)
             self.send_simple('SID_CHANNEL_CREATED')
             self.set_state('Root')
         else:
@@ -529,7 +524,7 @@ class BotChat(BaseStateMachine):
                        SID_NO='NoPseudoChatState')
         self.send_simple('SID_SUB_UNSUBSCRIBE_PROMPT', ctas)
 
-    @BaseStateMachine.state_handler('DelSubs')
+    @BaseStateMachine.state_handler('DelSub')
     def state_handler_del_sub(self, event):
         if event.is_quick_reply:
             p = Payload.from_string(event.quick_reply_payload)
@@ -579,9 +574,8 @@ class BotChat(BaseStateMachine):
     @BaseStateMachine.state_handler('SetAnncText')
     def state_handler_set_annc_text(self, event):
         if event.is_text_message:
-            self.annc.text = event.message_text.strip()
-            self.annc.update_db(op=UpdateOps.Supported.SET,
-                                val={'text': self.annc.text})
+            self.annc.update(op=UpdateOps.Supported.SET,
+                             text=event.message_text.strip())
             self.send_simple('SID_ANNC_DONE')
             Horn(self.page).notify(self.annc)
             self.annc = None
