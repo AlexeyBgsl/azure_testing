@@ -27,20 +27,20 @@ class UpdateOps(object):
         ADD_TO_LIST = '$addToSet'
         DEL_FROM_LIST = '$pull'
 
-    def __init__(self, op=None, val=None):
+    def __init__(self, op=None, **kwargs):
         self.has_update = False
         self.opts = {}
-        if op:
-            self.add(op, val)
+        if op and kwargs:
+            self.add(op, **kwargs)
 
-    def add(self, op, val):
+    def add(self, op, **kwargs):
         assert op
         assert isinstance(op, self.Supported)
-        assert val and isinstance(val, dict)
+        assert kwargs
         _op = op.value
         if not self.opts.get(_op):
             self.opts[_op] = {}
-        self.opts[_op].update(val)
+        self.opts[_op].update(kwargs)
         self.has_update = True
 
     @property
@@ -115,18 +115,41 @@ class BasicEntry(ABC):
 
     def save(self):
         if self.oid:
-            self.update_db(op=UpdateOps.Supported.SET, val=self.to_dict())
+            self.update(op=UpdateOps.Supported.SET, **self.to_dict())
         else:
             result = self.table.collection.insert_one(self.to_dict())
             self.oid = result.inserted_id
 
-    def update_db_ex(self, ops):
+    def update_ex(self, ops):
         assert self.oid
-        return self.table.collection.update_one({OID_KEY: self.oid}, ops.update)
+        assert ops and isinstance(ops, UpdateOps)
+        d = ops.update
+        r = self.table.collection.update_one({OID_KEY: self.oid}, d)
+        for op in ops.update:
+            for k in d[op]:
+                assert k in self.db_fields
+                v = d[op][k]
+                if op == ops.Supported.SET.value:
+                    setattr(self, k, v)
+                elif op == ops.Supported.ADD_TO_LIST.value:
+                    l = getattr(self, k)
+                    assert isinstance(l, list)
+                    if v not in l:
+                        l.append(v)
+                        setattr(self, k, l)
+                elif op is ops.Supported.DEL_FROM_LIST.value:
+                    l = getattr(self, k)
+                    assert isinstance(l, list)
+                    if v in l:
+                        l.remove(v)
+                        setattr(self, k, l)
+                else:
+                    raise ValueError('Invalid op: {}'.format(op))
+        return r.matched_count == 1
 
-    def update_db(self, op, val):
+    def update(self, op, **kwargs):
         assert self.oid
-        return self.update_db_ex(UpdateOps(op=op, val=val))
+        return self.update_ex(UpdateOps(op=op, **kwargs))
 
     def read(self):
         entity = self.table.read(self.oid)

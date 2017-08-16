@@ -70,9 +70,7 @@ class Channel(BasicEntry):
             r = super().find(uchid=self.uchid)
             assert len(r)
             if len(r) == 1:
-                self.status = 'ready'
-                self.update_db(op=UpdateOps.Supported.SET,
-                               val={'status': 'ready'})
+                self.update(op=UpdateOps.Supported.SET, status='ready')
                 break
             logging.info("User CHID#%s is already in use. Regenerating... ",
                          self.uchid)
@@ -127,18 +125,16 @@ class Channel(BasicEntry):
             FileStorage.upload(png_fname, 'qr-code', blob_fname,
                                content_type='image/png')
             os.remove(png_fname)
-            self.qr_code = FileStorage.get_url('qr-code', blob_fname)
-            opts.add(UpdateOps.Supported.SET, val={'qr_code': self.qr_code})
+            url = FileStorage.get_url('qr-code', blob_fname)
+            opts.add(UpdateOps.Supported.SET, qr_code=url)
         if messenger_code_url:
             FileStorage.upload_from_url(messenger_code_url,
                                         'messenger-code',
                                         blob_fname)
-            self.messenger_code = FileStorage.get_url('messenger-code',
-                                                      blob_fname)
-            opts.add(UpdateOps.Supported.SET,
-                     val={'messenger_code': self.messenger_code})
+            url = FileStorage.get_url('messenger-code', blob_fname)
+            opts.add(UpdateOps.Supported.SET, messenger_code=url)
         if opts.has_update:
-            self.update_db_ex(opts)
+            self.update_ex(opts)
 
     def save(self):
         if not self.oid:
@@ -151,21 +147,14 @@ class Channel(BasicEntry):
         return '{}-{}-{}'.format(self.uchid[:3], self.uchid[3:6], self.uchid[6:9])
 
     def subscribe(self, uid):
-        r = self.update_db(op=UpdateOps.Supported.ADD_TO_LIST, val={"subs": uid})
-        if r.matched_count == 1:
-            if uid not in self.subs:
-                self.subs.append(uid)
-        else:
+        r = self.update(op=UpdateOps.Supported.ADD_TO_LIST, subs=uid)
+        if not r:
             logging.warning("U#%s: cannot subscribe user %s",
                             str(self.oid), str(uid))
 
     def unsubscribe(self, uid):
-        r = self.update_db(op=UpdateOps.Supported.DEL_FROM_LIST,
-                           val={"subs": uid})
-        if r.matched_count == 1:
-            if uid in self.subs:
-                self.subs.remove(uid)
-        else:
+        r = self.update(op=UpdateOps.Supported.DEL_FROM_LIST, subs=uid)
+        if not r:
             logging.warning("U#%s: cannot unsubscribe user %s",
                             str(self.oid), str(uid))
 
