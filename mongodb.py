@@ -157,7 +157,7 @@ class BasicTable(ABC):
     def query_unique(self, **kwargs):
         results = self.collection.find(kwargs)
         if results.count() > 1:
-            raise ValueError("%s must be unique", **kwargs)
+            raise ValueError("{}: ({!r}) must be unique".format(self.collection.name, kwargs))
         for r in results.limit(-1):
             return r
         return None
