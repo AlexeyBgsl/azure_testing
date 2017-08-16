@@ -14,6 +14,8 @@ MAX_CHID_CYPHERS = 9
 def _m_link(ref):
     return 'http://m.me/' + FB_PAGE_NAME + '?ref=' + ref
 
+def _blob_fname(fname):
+    return FB_PAGE_NAME + '.' + fname
 
 class Users(BasicTable):
     def __init__(self):
@@ -117,21 +119,22 @@ class Channel(BasicEntry):
     def set_code(self, ref=None, messenger_code_url=None):
         assert self.oid
         opts = UpdateOps()
+        blob_fname = _blob_fname(self.uchid)
         if ref:
             url = pyqrcode.create(_m_link(ref), error='Q')
             png_fname = os.path.join(tempfile.gettempdir(), self.uchid)
             url.png(png_fname, scale=5)
-            FileStorage.upload(png_fname, 'qr-code', self.uchid,
+            FileStorage.upload(png_fname, 'qr-code', blob_fname,
                                content_type='image/png')
             os.remove(png_fname)
-            self.qr_code = FileStorage.get_url('qr-code', self.uchid)
+            self.qr_code = FileStorage.get_url('qr-code', blob_fname)
             opts.add(UpdateOps.Supported.SET, val={'qr_code': self.qr_code})
         if messenger_code_url:
             FileStorage.upload_from_url(messenger_code_url,
                                         'messenger-code',
-                                        self.uchid)
+                                        blob_fname)
             self.messenger_code = FileStorage.get_url('messenger-code',
-                                                      self.uchid)
+                                                      blob_fname)
             opts.add(UpdateOps.Supported.SET,
                      val={'messenger_code': self.messenger_code})
         if opts.has_update:
