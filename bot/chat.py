@@ -1,4 +1,5 @@
 import logging
+from collections import namedtuple
 from fbmq import QuickReply, Template
 from bot.translations import BotString
 from db import Channel, Annc, UpdateOps
@@ -57,20 +58,24 @@ class Payload(object):
         return s
 
 
-class CTAList(object):
-    class CTA(object):
-        def __init__(self, sid, action_id):
-            self.sid = sid
-            self.action_id = action_id
+CTA = namedtuple('CTA', ['sid', 'action_id'])
 
-    def __init__(self, sm, **kwargs):
+
+class CTAList(object):
+    def __init__(self, sm, c=None):
         self.ctas = []
         self.sm = sm
-        self.add(**kwargs)
+        if c:
+            self.add(c)
 
-    def add(self, **kwargs):
-        for k in kwargs:
-            self.ctas.append(CTAList.CTA(sid=k, action_id=kwargs[k]))
+    def add(self, c):
+        assert c
+        if isinstance(c, CTA):
+            self.ctas.append(c)
+        elif isinstance(c, list):
+            self.ctas.extend(c)
+        else:
+            raise TypeError("Incorrect type: {}".format(type(c)))
 
     @property
     def quick_replies(self):
@@ -200,7 +205,7 @@ class BotChat(BaseStateMachine):
 
     def send_simple(self, msg_sid, ctas = None):
         msg = str(BotString(msg_sid, user=self.user, channel=self.channel))
-        qreps = ctas.quick_replies if ctas else None
+        qreps = CTAList(self, ctas).quick_replies if ctas else None
         self.page.send(self.user.fbid, msg, quick_replies=qreps)
 
     def on_qrep_simple(self, **kwargs):
@@ -208,7 +213,7 @@ class BotChat(BaseStateMachine):
         self.set_state(action_id)
 
     def _state_init_select_channel(self, subscribed):
-        ctas = CTAList(sm=self)
+        ctas = []
         if subscribed:
             channels = Channel.all_subscribed(uid=self.user.oid)
             msg_sid = 'SID_SELECT_SUB_PROMPT'
@@ -221,12 +226,12 @@ class BotChat(BaseStateMachine):
         last = max(skip + self.FB_MAX_GENERIC_TEMPLATE_ELEMENTS,
                    self.FB_MAX_GENERIC_TEMPLATE_ELEMENTS)
         if last < ccnt:
-            ctas.add(SID_NEXT=str(last))
+            ctas.append(CTA(sid='SID_NEXT', action_id=str(last)))
         if skip:
             prev = skip - self.FB_MAX_GENERIC_TEMPLATE_ELEMENTS
             if prev < 0:
                 prev = 0
-            ctas.add(SID_BACK=str(prev))
+            ctas.append(CTA(sid='SID_BACK', action_id=str(prev)))
 
         elements = []
         for c in channels[skip:last]:
@@ -284,11 +289,12 @@ class BotChat(BaseStateMachine):
 
     @BaseStateMachine.state_initiator('Root')
     def state_init_root(self):
-        ctas = CTAList(sm=self,
-                       SID_BROWSE_CHANNELS='BrowseChannels',
-                       SID_MY_CHANNELS='MyChannels',
-                       SID_MY_SUBSCRIPTIONS='MySubscriptions',
-                       SID_MAKE_ANNOUNCEMENT='MakeAnnouncement')
+        ctas = [
+            CTA(sid='SID_BROWSE_CHANNELS', action_id='BrowseChannels'),
+            CTA(sid='SID_MY_CHANNELS', action_id='MyChannels'),
+            CTA(sid='SID_MY_SUBSCRIPTIONS', action_id='MySubscriptions'),
+            CTA(sid='SID_MAKE_ANNOUNCEMENT', action_id='MakeAnnouncement')
+        ]
         self.send_simple('SID_ROOT_PROMPT', ctas)
 
     @BaseStateMachine.state_handler('Root')
@@ -297,20 +303,22 @@ class BotChat(BaseStateMachine):
 
     @BaseStateMachine.state_initiator('Channels')
     def state_init_channels(self):
-        ctas = CTAList(sm=self,
-                       SID_BROWSE_CHANNELS='BrowseChannels',
-                       SID_MY_CHANNELS='MyChannels',
-                       SID_CHANNELS_HELP='ChannelsHelp')
+        ctas = [
+            CTA(sid='SID_BROWSE_CHANNELS', action_id='BrowseChannels'),
+            CTA(sid='SID_MY_CHANNELS', action_id='MyChannels'),
+            CTA(sid='SID_CHANNELS_HELP', action_id='ChannelsHelp')
+        ]
         self.send_simple('SID_CHANNELS_PROMPT', ctas)
 
     @BaseStateMachine.state_initiator('BrowseChannels')
     def state_init_browse_channels(self):
-        ctas = CTAList(sm=self,
-                       SID_BROWSE_NEWS_CHANNELS='Root',
-                       SID_BROWSE_ENTERTAINMENT_CHANNELS='Root',
-                       SID_BROWSE_SPORT_CHANNELS='Root',
-                       SID_BROWSE_CULTURE_CHANNELS='Root',
-                       SID_BROWSE_LOCAL_CHANNELS='Root')
+        ctas = [
+            CTA(sid='SID_BROWSE_NEWS_CHANNELS', action_id='Root'),
+            CTA(sid='SID_BROWSE_ENTERTAINMENT_CHANNELS', action_id='Root'),
+            CTA(sid='SID_BROWSE_SPORT_CHANNELS', action_id='Root'),
+            CTA(sid='SID_BROWSE_CULTURE_CHANNELS', action_id='Root'),
+            CTA(sid='SID_BROWSE_LOCAL_CHANNELS', action_id='Root')
+        ]
         self.send_simple('SID_BROWSE_CHANNELS_PROMPT', ctas)
 
     @BaseStateMachine.state_handler('BrowseChannels')
@@ -321,10 +329,9 @@ class BotChat(BaseStateMachine):
     @BaseStateMachine.state_initiator('MyChannels')
     def state_init_my_channels(self):
         channels = Channel.find(owner_uid=self.user.oid)
-        ctas = CTAList(sm=self,
-                       SID_CREATE_CHANNEL='CreateChannel')
+        ctas = [CTA(sid='SID_CREATE_CHANNEL', action_id='CreateChannel')]
         if len(channels):
-            ctas.add(SID_EDIT_CHANNEL='EditChannel')
+            ctas.append(CTA(sid='SID_EDIT_CHANNEL', action_id='EditChannel'))
         self.send_simple('SID_MY_CHANNELS_PROMPT', ctas)
 
     @BaseStateMachine.state_handler('MyChannels')
@@ -342,10 +349,10 @@ class BotChat(BaseStateMachine):
     @BaseStateMachine.state_initiator('MySubscriptions')
     def state_init_my_subscriptions(self):
         subs = Channel.all_subscribed(self.user.oid)
-        ctas = CTAList(sm=self,
-                       SID_ADD_SUBSCRIPTION='AddSub')
+        ctas = [CTA(sid='SID_ADD_SUBSCRIPTION', action_id='AddSub')]
         if len(subs):
-            ctas.add(SID_LIST_SUBSCRIPTIONS='ListSubs')
+            ctas.append(CTA(sid='SID_LIST_SUBSCRIPTIONS',
+                            action_id='ListSubs'))
         self.send_simple('SID_SUBSCRIPTIONS_PROMPT', ctas)
 
     @BaseStateMachine.state_handler('MySubscriptions')
@@ -355,10 +362,10 @@ class BotChat(BaseStateMachine):
     @BaseStateMachine.state_initiator('MakeAnnouncement')
     def state_init_make_annc(self):
         channels = Channel.find(owner_uid=self.user.oid)
-        ctas = CTAList(sm=self,
-                       SID_ANNC_NEW_CHANNEL='CreateChannel')
+        ctas = [CTA(sid='SID_ANNC_NEW_CHANNEL', action_id='CreateChannel')]
         if len(channels):
-            ctas.add(SID_ANNC_SELECT_CHANNEL='AnncSelectChannel')
+            ctas.append(CTA(sid='SID_ANNC_SELECT_CHANNEL',
+                            action_id='AnncSelectChannel'))
             msg_sid = 'SID_ANNC_ROOT_PROMPT'
         else:
             msg_sid = 'SID_ANNC_CREATE_CHANNEL_PROMPT'
@@ -418,10 +425,11 @@ class BotChat(BaseStateMachine):
 
     @BaseStateMachine.state_initiator('SelectEditChannelType')
     def state_init_select_edit_channel_type(self):
-        ctas = CTAList(sm=self,
-                       SID_EDIT_CHANNEL_NAME='EditChannelName',
-                       SID_EDIT_CHANNEL_DESC='EditChannelDesc',
-                       SID_EDIT_CHANNEL_DELETE='DeleteChannel')
+        ctas = [
+            CTA(sid='SID_EDIT_CHANNEL_NAME', action_id='EditChannelName'),
+            CTA(sid='SID_EDIT_CHANNEL_DESC', action_id='EditChannelDesc'),
+            CTA(sid='SID_EDIT_CHANNEL_DELETE', action_id='DeleteChannel')
+        ]
         self.send_simple('SID_SELECT_CHANNEL_EDIT_ACTION', ctas)
 
     @BaseStateMachine.state_handler('SelectEditChannelType')
@@ -454,9 +462,10 @@ class BotChat(BaseStateMachine):
 
     @BaseStateMachine.state_initiator('DeleteChannel')
     def state_init_delete_channel(self):
-        ctas = CTAList(sm=self,
-                       SID_YES='YesPseudoChatState',
-                       SID_NO='NoPseudoChatState')
+        ctas = [
+            CTA(sid='SID_YES', action_id='YesPseudoChatState'),
+            CTA(sid='SID_NO', action_id='NoPseudoChatState')
+        ]
         self.send_simple('SID_DEL_CHANNEL_PROMPT', ctas)
 
     @BaseStateMachine.state_handler('DeleteChannel')
@@ -508,9 +517,10 @@ class BotChat(BaseStateMachine):
 
     @BaseStateMachine.state_initiator('SubSelectAction')
     def state_init_sub_select_action(self):
-        ctas = CTAList(sm=self,
-                       SID_SUB_DELETE='DelSub',
-                       SID_SUB_SHOW_ANNCS='Root')
+        ctas = [
+            CTA(sid='SID_SUB_DELETE', action_id='DelSub'),
+            CTA(sid='SID_SUB_SHOW_ANNCS', action_id='Root')
+        ]
         self.send_simple('SID_SELECT_SUB_ACTION_PROMPT', ctas)
 
     @BaseStateMachine.state_handler('SubSelectAction')
@@ -519,9 +529,10 @@ class BotChat(BaseStateMachine):
 
     @BaseStateMachine.state_initiator('DelSub')
     def state_init_del_sub(self):
-        ctas = CTAList(sm=self,
-                       SID_YES='YesPseudoChatState',
-                       SID_NO='NoPseudoChatState')
+        ctas = [
+            CTA(sid='SID_YES', action_id='YesPseudoChatState'),
+            CTA(sid='SID_NO', action_id='NoPseudoChatState')
+        ]
         self.send_simple('SID_SUB_UNSUBSCRIBE_PROMPT', ctas)
 
     @BaseStateMachine.state_handler('DelSub')
@@ -598,16 +609,16 @@ class BotChat(BaseStateMachine):
 
     @classmethod
     def get_menu_buttons(cls):
-        menu_items = dict(
-            SID_MENU_ANNOUNCEMENTS='MakeAnnouncement',
-            SID_MENU_CHANNELS='MyChannels',
-            SID_MENU_SUBSCRIPTIONS='MySubscriptions',
-            SID_MENU_HELP='Help'
-        )
+        menu_items = [
+            CTA(sid='SID_MENU_SUBSCRIPTIONS', action_id='MySubscriptions'),
+            CTA(sid='SID_MENU_ANNOUNCEMENTS', action_id= 'MakeAnnouncement'),
+            CTA(sid='SID_MENU_CHANNELS', action_id='MyChannels'),
+            CTA(sid='SID_MENU_HELP', action_id='Help'),
+        ]
         buttons = []
-        for k in menu_items:
-            p = Payload(type='ClbMenu', state='Root', action_id=menu_items[k])
-            btn = Template.ButtonPostBack(str(BotString(k)), str(p))
+        for cta in menu_items:
+            p = Payload(type='ClbMenu', state='Root', action_id=cta.action_id)
+            btn = Template.ButtonPostBack(str(BotString(cta.sid)), str(p))
             buttons.append(btn)
         return buttons
 
