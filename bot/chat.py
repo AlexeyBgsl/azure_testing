@@ -96,6 +96,24 @@ class CTAList(object):
             qreps.append(QuickReply(title, str(p)))
         return qreps if qreps else None
 
+    @property
+    def buttons(self):
+        buttons = []
+        for cta in self.ctas:
+            p = Payload(type='ClbQRep',
+                        state=self.sm.state,
+                        action_id=cta.action_id,
+                        channel=self.sm.channel,
+                        annc = self.sm.annc)
+            if cta.sid.startswith('SID_'):
+               title = str(BotString(cta.sid,
+                                     user=self.sm.user,
+                                     channel=self.sm.channel,
+                                     annc=self.sm.annc))
+            else:
+                title = cta.sid
+            buttons.append(Template.ButtonPostBack(title, str(p)))
+        return buttons if buttons else None
 
 class BotRef(object):
     PARAMS_DELIMITER = ';'
@@ -205,8 +223,11 @@ class BotChat(BaseStateMachine):
 
     def send_simple(self, msg_sid, ctas = None):
         msg = str(BotString(msg_sid, user=self.user, channel=self.channel))
-        qreps = CTAList(self, ctas).quick_replies if ctas else None
-        self.page.send(self.user.fbid, msg, quick_replies=qreps)
+        if ctas:
+            self.page.send(self.user.fbid,
+                           Template.Buttons(msg, CTAList(self, ctas).buttons))
+        else:
+            self.page.send(self.user.fbid, msg)
 
     def on_qrep_simple(self, **kwargs):
         action_id = kwargs.get('action_id', 'Root')
