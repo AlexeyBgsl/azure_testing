@@ -205,9 +205,9 @@ class BaseStateMachine(object):
 
     def call_helper(self, event):
         if self._state not in self.HELPERS:
-            raise ValueError(
-                "State with no helper: {}".format(self._state))
-        self.HELPERS[self._state](self, event=event)
+            logging.warning("State with no helper: %s", self._state)
+        else:
+            self.HELPERS[self._state](self, event=event)
 
     def set_state(self, state):
         if state not in self.INITIATORS and state not in self.HANDLERS:
@@ -319,7 +319,7 @@ class BotChat(BaseStateMachine):
         if event.is_quick_reply:
             p = Payload.from_string(event.quick_reply_payload)
             assert p.action_id == HOW_TO_ACTION_ID
-            self.call_helper()
+            self.call_helper(event)
         elif event.is_postback:
             p = Payload.from_string(event.postback_payload)
             self.set_state(p.action_id)
