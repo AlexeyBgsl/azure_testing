@@ -349,10 +349,9 @@ class BotChat(BaseStateMachine):
     @BaseStateMachine.state_initiator('Root')
     def state_init_root(self):
         ctas = [
-            CTA(sid='SID_BROWSE_CHANNELS', action_id='BrowseChannels'),
-            CTA(sid='SID_MY_CHANNELS', action_id='MyChannels'),
             CTA(sid='SID_MY_SUBSCRIPTIONS', action_id='MySubscriptions'),
-            CTA(sid='SID_MAKE_ANNOUNCEMENT', action_id='MakeAnnouncement')
+            CTA(sid='SID_MAKE_ANNOUNCEMENT', action_id='MakeAnnouncement'),
+            CTA(sid='SID_MY_CHANNELS', action_id='MyChannels'),
         ]
         self.send_simple('SID_ROOT_PROMPT', ctas=ctas)
 
