@@ -343,7 +343,7 @@ class BotChat(BaseStateMachine):
             CTA(sid='SID_MY_SUBSCRIPTIONS', action_id='MySubscriptions'),
             CTA(sid='SID_MAKE_ANNOUNCEMENT', action_id='MakeAnnouncement')
         ]
-        self.send_simple('SID_ROOT_PROMPT', ctas)
+        self.send_simple('SID_ROOT_PROMPT', ctas=ctas)
 
     @BaseStateMachine.state_handler('Root')
     def state_handler_root(self, event):
@@ -364,7 +364,7 @@ class BotChat(BaseStateMachine):
         ctas = [CTA(sid='SID_CREATE_CHANNEL', action_id='CreateChannel')]
         if len(channels):
             ctas.append(CTA(sid='SID_EDIT_CHANNEL', action_id='EditChannel'))
-        self.send_simple('SID_MY_CHANNELS_PROMPT', ctas)
+        self.send_simple('SID_MY_CHANNELS_PROMPT', ctas=ctas)
 
     @BaseStateMachine.state_handler('MyChannels')
     def state_handle_my_channels(self, event):
@@ -385,7 +385,7 @@ class BotChat(BaseStateMachine):
         if len(subs):
             ctas.append(CTA(sid='SID_LIST_SUBSCRIPTIONS',
                             action_id='ListSubs'))
-        self.send_simple('SID_SUBSCRIPTIONS_PROMPT', ctas)
+        self.send_simple('SID_SUBSCRIPTIONS_PROMPT', ctas=ctas)
 
     @BaseStateMachine.state_handler('MySubscriptions')
     def state_handler_my_subscriptions(self, event):
@@ -462,7 +462,7 @@ class BotChat(BaseStateMachine):
             CTA(sid='SID_EDIT_CHANNEL_DESC', action_id='EditChannelDesc'),
             CTA(sid='SID_EDIT_CHANNEL_DELETE', action_id='DeleteChannel')
         ]
-        self.send_simple('SID_SELECT_CHANNEL_EDIT_ACTION', ctas)
+        self.send_simple('SID_SELECT_CHANNEL_EDIT_ACTION', ctas=ctas)
 
     @BaseStateMachine.state_handler('SelectEditChannelType')
     def state_handler_select_edit_channel_type(self, event):
@@ -498,7 +498,7 @@ class BotChat(BaseStateMachine):
             CTA(sid='SID_YES', action_id='YesPseudoChatState'),
             CTA(sid='SID_NO', action_id='NoPseudoChatState')
         ]
-        self.send_simple('SID_DEL_CHANNEL_PROMPT', ctas)
+        self.send_simple('SID_DEL_CHANNEL_PROMPT', ctas=ctas)
 
     @BaseStateMachine.state_handler('DeleteChannel')
     def state_handler_delete_channel(self, event):
