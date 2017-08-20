@@ -13,6 +13,9 @@ BotChatClbTypes = dict(
 )
 
 
+HOW_TO_ACTION_ID='HowToAction'
+
+
 class Payload(object):
     DELIMITER='/'
     SUB_DELIMITER = ':'
@@ -235,17 +238,19 @@ class BotChat(BaseStateMachine):
                     channel=self.channel, annc=self.annc)
         self.user.update(UpdateOps.Supported.SET, state_payload=str(p))
 
-    def send_simple(self, msg_sid, ctas = None):
+    def send_simple(self, msg_sid, ctas = None, howto=True):
+        qreps = None
+        if howto:
+            qreps = CTAList(self,
+                            [CTA(sid='SID_HOW_TO',
+                                 action_id=HOW_TO_ACTION_ID)]).quick_replies
         msg = str(BotString(msg_sid, user=self.user, channel=self.channel))
         if ctas:
             self.page.send(self.user.fbid,
-                           Template.Buttons(msg, CTAList(self, ctas).buttons))
+                           Template.Buttons(msg, CTAList(self, ctas).buttons),
+                           quick_replies=qreps)
         else:
-            self.page.send(self.user.fbid, msg)
-
-    def on_qrep_simple(self, **kwargs):
-        action_id = kwargs.get('action_id', 'Root')
-        self.set_state(action_id)
+            self.page.send(self.user.fbid, msg, quick_replies=qreps)
 
     def _state_init_select_channel(self, subscribed):
         ctas = []
@@ -313,7 +318,8 @@ class BotChat(BaseStateMachine):
     def _state_handler_default(self, event):
         if event.is_quick_reply:
             p = Payload.from_string(event.quick_reply_payload)
-            self.set_state(p.action_id)
+            assert p.action_id == HOW_TO_ACTION_ID
+            self.call_helper()
         elif event.is_postback:
             p = Payload.from_string(event.postback_payload)
             self.set_state(p.action_id)
@@ -327,12 +333,17 @@ class BotChat(BaseStateMachine):
         ctas = [
             CTA(sid='SID_MY_CHANNELS', action_id='MyChannels'),
             CTA(sid='SID_MY_SUBSCRIPTIONS', action_id='MySubscriptions'),
-            CTA(sid='SID_HOW_TO', action_id='RootHelp')
+            CTA(sid='SID_HOW_TO', action_id=HOW_TO_ACTION_ID)
         ]
-        self.send_simple('SID_ACQUAINTANCE_PROMPT', ctas)
+        self.send_simple('SID_ACQUAINTANCE_PROMPT', ctas=ctas, howto=False)
 
     @BaseStateMachine.state_handler('Acquaintance')
     def state_handler_acquaintance(self, event):
+        if event.is_postback:
+            p = Payload.from_string(event.postback_payload)
+            if p.action_id == HOW_TO_ACTION_ID:
+                self.call_helper(event)
+                return
         self._state_handler_default(event=event)
 
     @BaseStateMachine.state_initiator('Root')
