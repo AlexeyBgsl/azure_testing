@@ -2,7 +2,7 @@ import logging
 import fbmq
 import functools
 from bot.config import CONFIG
-from db import User, MsgHandler, UpdateOps
+from db import User, UpdateOps
 from bot.chat import (
     BotChatClbTypes,
     chat_clb_handler,
@@ -78,15 +78,6 @@ class BotPage(fbmq.Page):
             user.save()
         return user
 
-    def register_for_message(self, user, payload):
-        # Clean up - delete previously created handler if exists
-        h = MsgHandler().find_unique(fbid=user.fbid)
-        if h:
-            h.delete()
-        # Register new handler
-        h = MsgHandler(fbid=user.fbid, payload=payload)
-        h.save()
-
     @dump_member_func
     def on_start(self, event):
         user = self.create_or_update_user(event.sender_id)
@@ -116,16 +107,7 @@ class BotPage(fbmq.Page):
             logging.debug("[U#%s] [on_message] ignored as a quick reply",
                           sender_id)
         else:
-            h = MsgHandler.find_unique(fbid=sender_id)
-            if h:
-                chat_msg_handler(user, get_page(), h.payload, event)
-                h.delete()
-            elif event.is_text_message:
-                message = event.message_text
-                logging.debug("[U#%s] [on_message] %s", sender_id, message)
-                self.send(sender_id, "thank you! your message is '%s'" % message)
-            else:
-                self.send(sender_id, "thank you! your message received")
+            chat_msg_handler(user, get_page(), event)
 
     @dump_member_func
     def on_echo(self, event):

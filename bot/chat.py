@@ -211,15 +211,15 @@ class BotChat(BaseStateMachine):
     def class_name(cls):
         return cls.__name__
 
-    def _register_for_user_input(self):
-        p = Payload(type='ClbMsg', state=self.state, action_id='UsrInput',
-                    channel=self.channel, annc=self.annc)
-        self.page.register_for_message(self.user, str(p))
-
     def set_state(self, state):
         if state != self.state:
             super().set_state(state=state)
-            self._register_for_user_input()
+
+    def call_initiator(self, **kwargs):
+        super().call_initiator(**kwargs)
+        p = Payload(type='ClbMsg', state=self.state, action_id='UsrInput',
+                    channel=self.channel, annc=self.annc)
+        self.user.update(UpdateOps.Supported.SET, state_payload=str(p))
 
     def send_simple(self, msg_sid, ctas = None):
         msg = str(BotString(msg_sid, user=self.user, channel=self.channel))
@@ -708,6 +708,7 @@ def chat_menu_handler(user, page, payload, event):
     BotChat.clb_by_payload(user, page, payload, event)
 
 
-def chat_msg_handler(user, page, payload, event):
-    logging.debug("[U#%s] Msg Handler: %s", event.sender_id, payload)
-    BotChat.clb_by_payload(user, page, payload, event)
+def chat_msg_handler(user, page, event):
+    logging.debug("[U#%s] Msg Handler: %s", event.sender_id,
+                  user.state_payload)
+    BotChat.clb_by_payload(user, page, user.state_payload, event)
