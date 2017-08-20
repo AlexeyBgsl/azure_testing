@@ -356,23 +356,7 @@ class BotChat(BaseStateMachine):
             CTA(sid='SID_MY_CHANNELS', action_id='MyChannels'),
             CTA(sid='SID_CHANNELS_HELP', action_id='ChannelsHelp')
         ]
-        self.send_simple('SID_CHANNELS_PROMPT', ctas)
-
-    @BaseStateMachine.state_initiator('BrowseChannels')
-    def state_init_browse_channels(self):
-        ctas = [
-            CTA(sid='SID_BROWSE_NEWS_CHANNELS', action_id='Root'),
-            CTA(sid='SID_BROWSE_ENTERTAINMENT_CHANNELS', action_id='Root'),
-            CTA(sid='SID_BROWSE_SPORT_CHANNELS', action_id='Root'),
-            CTA(sid='SID_BROWSE_CULTURE_CHANNELS', action_id='Root'),
-            CTA(sid='SID_BROWSE_LOCAL_CHANNELS', action_id='Root')
-        ]
-        self.send_simple('SID_BROWSE_CHANNELS_PROMPT', ctas)
-
-    @BaseStateMachine.state_handler('BrowseChannels')
-    def state_handler_browse_channels(self, event):
-        self.send_simple('SID_DBG_NO_ACTION')
-        self._state_handler_default(event=event)
+        self.send_simple('SID_CHANNELS_PROMPT', ctas=ctas)
 
     @BaseStateMachine.state_initiator('MyChannels')
     def state_init_my_channels(self):
