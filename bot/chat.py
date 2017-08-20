@@ -157,6 +157,7 @@ class BotRef(object):
 class BaseStateMachine(object):
     HANDLERS = dict()
     INITIATORS = dict()
+    HELPERS = dict()
 
     @classmethod
     def state_initiator(cls, state):
@@ -170,6 +171,13 @@ class BaseStateMachine(object):
         def actual_decorator(func):
             assert state not in cls.HANDLERS
             cls.HANDLERS[state] = func
+        return actual_decorator
+
+    @classmethod
+    def state_helper(cls, state):
+        def actual_decorator(func):
+            assert state not in cls.HELPERS
+            cls.HELPERS[state] = func
         return actual_decorator
 
     def __init__(self, user=None, channel=None, annc=None, state=None):
@@ -191,6 +199,12 @@ class BaseStateMachine(object):
             raise ValueError(
                 "State with no handler: {}".format(self._state))
         self.HANDLERS[self._state](self, event=event)
+
+    def call_helper(self, event):
+        if self._state not in self.HELPERS:
+            raise ValueError(
+                "State with no helper: {}".format(self._state))
+        self.HELPERS[self._state](self, event=event)
 
     def set_state(self, state):
         if state not in self.INITIATORS and state not in self.HANDLERS:
