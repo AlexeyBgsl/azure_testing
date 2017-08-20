@@ -28,7 +28,8 @@ class User(BasicEntry):
     table = Users()
     INIT_FIELDS = [
         EntryField('fbid', 0),
-        EntryField('fbmsgseq', 0)
+        EntryField('fbmsgseq', 0),
+        EntryField('state_payload', '')
     ]
 
     @classmethod
@@ -238,16 +239,3 @@ class String(BasicEntry):
             if locale:
                 l.append(locale)
         return l
-
-
-class MsgHandlers(BasicTable):
-    def __init__(self):
-        super().__init__(col_name="Handlers")
-
-
-class MsgHandler(BasicEntry):
-    table = MsgHandlers()
-    INIT_FIELDS = [
-        EntryField('fbid', None),
-        EntryField('payload', None)
-    ]
