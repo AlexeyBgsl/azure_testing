@@ -323,7 +323,7 @@ class BotChat(BaseStateMachine):
             pass
 
     @BaseStateMachine.state_initiator('Acquaintance')
-    def state_init_root(self):
+    def state_init_acquaintance(self):
         ctas = [
             CTA(sid='SID_MY_CHANNELS', action_id='MyChannels'),
             CTA(sid='SID_MY_SUBSCRIPTIONS', action_id='MySubscriptions'),
@@ -332,7 +332,7 @@ class BotChat(BaseStateMachine):
         self.send_simple('SID_ACQUAINTANCE_PROMPT', ctas)
 
     @BaseStateMachine.state_handler('Acquaintance')
-    def state_handler_root(self, event):
+    def state_handler_acquaintance(self, event):
         self._state_handler_default(event=event)
 
     @BaseStateMachine.state_initiator('Root')
