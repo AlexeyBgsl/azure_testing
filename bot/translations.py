@@ -13,7 +13,12 @@ DefaultStrings = dict(
     SID_MENU_ANNOUNCEMENTS='Make an Announcement',
     SID_MENU_HELP='How To',
     SID_DBG_NO_ACTION='[DBG] Not Implemented Yet',
-    SID_MY_CHANNELS='My Channels',
+    SID_ACQUAINTANCE_PROMPT=('Locano is quick notifications service. You can '
+                             'create your one way information channels or '
+                             'subscribe to someone’s else. It is very simple '
+                             'to start announce with us'),
+    SID_HOW_TO='How To',
+    SID_MY_CHANNELS='Channels',
     SID_SUBSCRIBE='Subscribe',
     SID_UNSUBSCRIBE='Unsubscribe',
     SID_ROOT_PROMPT=('Hi! Welcome to Locano Bot. '
@@ -30,7 +35,7 @@ DefaultStrings = dict(
     SID_BROWSE_LOCAL_CHANNELS='Local',
     SID_CREATE_CHANNEL='Create Channel',
     SID_EDIT_CHANNEL='Edit Channel',
-    SID_MY_SUBSCRIPTIONS='My Subscriptions',
+    SID_MY_SUBSCRIPTIONS='Subscriptions',
     SID_MY_CHANNELS_PROMPT='What do you want to do next?',
     SID_CHANNELS_HELP='Channels Help',
     SID_CHANNELS_PROMPT='What do you want to do next?',

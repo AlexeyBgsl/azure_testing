@@ -308,6 +308,19 @@ class BotChat(BaseStateMachine):
         else:
             pass
 
+    @BaseStateMachine.state_initiator('Acquaintance')
+    def state_init_root(self):
+        ctas = [
+            CTA(sid='SID_MY_CHANNELS', action_id='MyChannels'),
+            CTA(sid='SID_MY_SUBSCRIPTIONS', action_id='MySubscriptions'),
+            CTA(sid='SID_HOW_TO', action_id='RootHelp')
+        ]
+        self.send_simple('SID_ACQUAINTANCE_PROMPT', ctas)
+
+    @BaseStateMachine.state_handler('Acquaintance')
+    def state_handler_root(self, event):
+        self._state_handler_default(event=event)
+
     @BaseStateMachine.state_initiator('Root')
     def state_init_root(self):
         ctas = [
@@ -646,7 +659,8 @@ class BotChat(BaseStateMachine):
     def _on_menu(self, event):
         self._state_handler_default(event=event)
 
-    def __init__(self, page, user, state='Root', channel=None, annc=None):
+    def __init__(self, page, user, state='Acquaintance',
+                 channel=None, annc=None):
         self.page = page
         super().__init__(user=user, state=state, channel=channel, annc=annc)
 
