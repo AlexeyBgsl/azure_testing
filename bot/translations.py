@@ -9,7 +9,7 @@ DefaultStrings = dict(
     SID_GREETING='Hi {{user_first_name}}, welcome to Locano Chatbot',
     SID_DONT_UNDERSTAND='Sorry, I don\'t understand you',
     SID_MENU_CHANNELS='Channels',
-    SID_MENU_SUBSCRIPTIONS='Your Subscriptions',
+    SID_MENU_SUBSCRIPTIONS='Subscriptions',
     SID_MENU_ANNOUNCEMENTS='Make an Announcement',
     SID_MENU_HELP='How To',
     SID_DBG_NO_ACTION='[DBG] Not Implemented Yet',
@@ -29,9 +29,10 @@ DefaultStrings = dict(
     SID_CREATE_CHANNEL='Create Channel',
     SID_EDIT_CHANNEL='Edit Channel',
     SID_MY_SUBSCRIPTIONS='Subscriptions',
-    SID_MY_CHANNELS_PROMPT='What do you want to do next?',
-    SID_CHANNELS_HELP='Channels Help',
-    SID_CHANNELS_PROMPT='What do you want to do next?',
+    SID_MY_CHANNELS_PROMPT=('Information channel is a media for your '
+                            'announcements.\n'
+                            'Make one or browse existing to share or edit '
+                            'them.'),
     SID_HELP_CHANNEL_DETAILS='More',
     SID_HELP_CHANNEL_EXAMPLES='Examples',
     SID_HELP_CHANNELS_PROMPT=('Channels are used to broadcast announcements.\n'
