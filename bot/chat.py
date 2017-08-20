@@ -655,7 +655,6 @@ class BotChat(BaseStateMachine):
             CTA(sid='SID_MENU_SUBSCRIPTIONS', action_id='MySubscriptions'),
             CTA(sid='SID_MENU_ANNOUNCEMENTS', action_id= 'MakeAnnouncement'),
             CTA(sid='SID_MENU_CHANNELS', action_id='MyChannels'),
-            CTA(sid='SID_MENU_HELP', action_id='Help'),
         ]
         buttons = []
         for cta in menu_items:
