@@ -419,11 +419,9 @@ class BotChat(BaseStateMachine):
         else:
             self._state_handler_default(event=event)
 
-
     @BaseStateMachine.state_initiator('SetChannelDesc')
     def state_init_set_channel_desc(self):
         self.send_simple('SID_GET_CHANNEL_DESC')
-        pass
 
     @BaseStateMachine.state_handler('SetChannelDesc')
     def state_handler_set_channel_desc(self, event):
@@ -431,8 +429,30 @@ class BotChat(BaseStateMachine):
         if self._state_handler_edit_channel_field(fname='desc', event=event):
             logging.debug("[U#%s] Desired %s channel desc is: %s",
                           event.sender_id, self.channel.oid, self.channel.desc)
+            self.set_state('SetChannelPic')
+        else:
+            self._state_handler_default(event=event)
+
+    @BaseStateMachine.state_initiator('SetChannelPic')
+    def state_init_set_channel_pic(self):
+        ctas = [CTA(sid='SID_DONE', action_id='Root')]
+        self.send_simple('SID_GET_CHANNEL_PIC', ctas=ctas)
+
+    @BaseStateMachine.state_handler('SetChannelPic')
+    def state_handler_set_channel_pic(self, event):
+        assert self.channel
+        if event.is_attachment_message:
+            for a in event.message_attachments:
+                if a['type'] == 'image':
+                    self.channel.set_cover_pic(a['payload']['url'])
+                    break
             self.send_simple('SID_CHANNEL_CREATED')
             self.set_state('Root')
+        elif event.is_postback:
+            p = Payload.from_string(event.postback_payload)
+            assert p.action_id == 'Root'
+            self.send_simple('SID_CHANNEL_CREATED')
+            self.set_state(p.action_id)
         else:
             self._state_handler_default(event=event)
 

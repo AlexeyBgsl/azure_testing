@@ -18,6 +18,7 @@ DefaultStrings = dict(
                              'subscribe to someone’s else. It is very simple '
                              'to start announce with us'),
     SID_HOW_TO='How To',
+    SID_DONE='Done',
     SID_MY_CHANNELS='Channels',
     SID_SUBSCRIBE='Subscribe',
     SID_UNSUBSCRIBE='Unsubscribe',
@@ -41,6 +42,8 @@ DefaultStrings = dict(
     SID_GET_CHANNEL_DESC=('Channel $CHANNEL_NAME created.\n'
                           'Channel ID is $CHANNEL_ID.\n'
                           'Enter channel description'),
+    SID_GET_CHANNEL_PIC=('You can share a picture that will be used as a '
+                         'channel cover picture, if you wish'),
     SID_CHANNEL_CREATED='Channel $CHANNEL_NAME ($CHANNEL_ID) is ready to use',
     SID_SELECT_CHANNEL_PROMPT=('Please select a desired Channel from list '
                                'or enter Channel ID'),
