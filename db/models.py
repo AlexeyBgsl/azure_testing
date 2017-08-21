@@ -61,6 +61,7 @@ class Channel(BasicEntry):
         EntryField('subs', []),
         EntryField('messenger_code', ''),
         EntryField('qr_code', ''),
+        EntryField('pic_url', ''),
     ]
 
     def _alloc_uchid(self):
@@ -136,6 +137,13 @@ class Channel(BasicEntry):
             opts.add(UpdateOps.Supported.SET, messenger_code=url)
         if opts.has_update:
             self.update_ex(opts)
+
+    def set_cover_pic(self, url):
+        self.update(UpdateOps.Supported.SET, pic_url=url)
+
+    @property
+    def cover_pic(self):
+        return self.pic_url if self.pic_url else self.qr_core
 
     def save(self):
         if not self.oid:
