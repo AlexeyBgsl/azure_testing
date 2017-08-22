@@ -1,6 +1,6 @@
 Flask
 -e git+https://github.com/drj11/pypng.git#egg=pypng
--e git+https://github.com/anton-nayshtut/fbmq.git#egg=fbmq
+-e git+https://github.com/anton-nayshtut/fbmq.git@deploy#egg=fbmq
 pymongo
 azure-storage
 pyqrcode
