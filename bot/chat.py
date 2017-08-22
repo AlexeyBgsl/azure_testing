@@ -362,6 +362,20 @@ class BotChat(BaseStateMachine):
     def state_handler_root(self, event):
         self._state_handler_default(event=event)
 
+
+    @BaseStateMachine.state_initiator('NotImplemented')
+    def state_init_not_implemented(self):
+        ctas = [
+            CTA(sid='SID_MY_SUBSCRIPTIONS', action_id='MySubscriptions'),
+            CTA(sid='SID_MAKE_ANNOUNCEMENT', action_id='MakeAnnouncement'),
+            CTA(sid='SID_MY_CHANNELS', action_id='MyChannels'),
+        ]
+        self.send_simple('SID_DBG_NO_ACTION', ctas=ctas)
+
+    @BaseStateMachine.state_handler('NotImplemented')
+    def state_handler_not_implemented(self, event):
+        self._state_handler_default(event=event)
+
     @BaseStateMachine.state_initiator('MyChannels')
     def state_init_my_channels(self):
         channels = Channel.find(owner_uid=self.user.oid)
