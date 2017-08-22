@@ -11,7 +11,7 @@ from .config import FB_PAGE_NAME
 MAX_CHID_CYPHERS = 9
 
 
-def _m_link(ref):
+def m_link(ref):
     return 'http://m.me/' + FB_PAGE_NAME + '?ref=' + ref
 
 def _blob_fname(fname):
@@ -121,7 +121,7 @@ class Channel(BasicEntry):
         opts = UpdateOps()
         blob_fname = _blob_fname(self.uchid)
         if ref:
-            url = pyqrcode.create(_m_link(ref), error='Q')
+            url = pyqrcode.create(m_link(ref), error='Q')
             png_fname = os.path.join(tempfile.gettempdir(), self.uchid)
             url.png(png_fname, scale=5)
             FileStorage.upload(png_fname, 'qr-code', blob_fname,
@@ -143,7 +143,7 @@ class Channel(BasicEntry):
 
     @property
     def cover_pic(self):
-        return self.pic_url if self.pic_url else self.qr_core
+        return self.pic_url if self.pic_url else self.qr_code
 
     def save(self):
         if not self.oid:
