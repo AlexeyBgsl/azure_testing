@@ -1,8 +1,8 @@
 import logging
 from collections import namedtuple
-from fbmq import QuickReply, Template
+from fbmq import QuickReply, Template, Attachment
 from bot.translations import BotString
-from db import Channel, Annc, UpdateOps
+from db import Channel, Annc, UpdateOps, m_link
 from bot.horn import Horn
 
 
@@ -255,61 +255,36 @@ class BotChat(BaseStateMachine):
         else:
             self.page.send(self.user.fbid, msg, quick_replies=qreps)
 
-    def _state_init_select_channel(self, subscribed):
-        ctas = []
-        if subscribed:
-            channels = Channel.all_subscribed(uid=self.user.oid)
-            msg_sid = 'SID_SELECT_SUB_PROMPT'
-        else:
-            channels = Channel.find(owner_uid=self.user.oid)
-            msg_sid = 'SID_SELECT_CHANNEL_PROMPT'
-
+    def _state_init_select_channel(self, channels, ctas):
         ccnt = len(channels)
-        skip = getattr(self, 'skip', 0)
-        last = max(skip + self.FB_MAX_GENERIC_TEMPLATE_ELEMENTS,
-                   self.FB_MAX_GENERIC_TEMPLATE_ELEMENTS)
-        if last < ccnt:
-            ctas.append(CTA(sid='SID_NEXT', action_id=str(last)))
-        if skip:
-            prev = skip - self.FB_MAX_GENERIC_TEMPLATE_ELEMENTS
-            if prev < 0:
-                prev = 0
-            ctas.append(CTA(sid='SID_BACK', action_id=str(prev)))
-
-        elements = []
-        for c in channels[skip:last]:
-            pstr = str(Payload(type='ClbQRep',
-                               state=self.state,
-                               action_id='SelectChannel',
-                               channel=c))
-            title = str(BotString('SID_SELECT_THIS'))
-            t = Template.GenericElement(c.name,
-                                        subtitle=c.str_uchid + '\n' + c.desc,
-                                        image_url=c.qr_code,
-                                        buttons=[
-                                            Template.ButtonPostBack(title,
-                                                                    pstr)
-                                        ])
-            elements.append(t)
-
-        self.page.send(self.user.fbid, Template.Generic(elements))
-        self.send_simple(msg_sid, ctas=ctas)
+        skip = 0
+        while skip < ccnt:
+            last = min(skip + self.FB_MAX_GENERIC_TEMPLATE_ELEMENTS, ccnt)
+            elements = []
+            for c in channels[skip:last]:
+                buttons = []
+                for cta in ctas:
+                    pstr = str(Payload(type='ClbQRep',
+                                       state=self.state,
+                                       action_id=cta.action_id,
+                                       channel=c))
+                    title = str(BotString(cta.sid, channel=c))
+                    buttons.append(Template.ButtonPostBack(title, pstr))
+                t = Template.GenericElement(c.name,
+                                            subtitle=c.desc + '\n' + c.str_uchid,
+                                            image_url=c.cover_pic,
+                                            buttons=buttons)
+                elements.append(t)
+            skip = last
+            self.page.send(self.user.fbid, Template.Generic(elements),
+                           quick_replies=self.howto_qreps)
 
     def _state_handle_select_channel(self, event):
         if event.is_postback:
             p = Payload.from_string(event.postback_payload)
             self.channel = p.channel
-            return True
-        elif event.is_quick_reply:
-            self.channel = None
-            p = Payload.from_string(event.quick_reply_payload)
-            if p.action_id.isnumeric():
-                setattr(self, 'skip', int(p.action_id))
-            return True
-        elif event.is_text_message:
-            self.channel = Channel.by_uchid_str(event.message_text)
-            return True
-        return False
+            return p.action_id
+        return None
 
     def _state_handler_edit_channel_field(self, fname, event):
         if not event.is_text_message:
@@ -381,7 +356,8 @@ class BotChat(BaseStateMachine):
         channels = Channel.find(owner_uid=self.user.oid)
         ctas = [CTA(sid='SID_CREATE_CHANNEL', action_id='CreateChannel')]
         if len(channels):
-            ctas.append(CTA(sid='SID_EDIT_CHANNEL', action_id='EditChannel'))
+            ctas.append(CTA(sid='SID_BROWSE_CHANNELS',
+                            action_id='BrowseChannels'))
         self.send_simple('SID_MY_CHANNELS_PROMPT', ctas=ctas)
 
     @BaseStateMachine.state_handler('MyChannels')
@@ -473,17 +449,19 @@ class BotChat(BaseStateMachine):
         else:
             self._state_handler_default(event=event)
 
-    @BaseStateMachine.state_initiator('EditChannel')
-    def state_init_edit_channel(self):
-        self._state_init_select_channel(subscribed=False)
+    @BaseStateMachine.state_initiator('BrowseChannels')
+    def state_init_browse_channels(self):
+        channels = Channel.find(owner_uid=self.user.oid)
+        ctas = [
+            CTA(sid='SID_VIEW_CHANNEL_BTN', action_id='NotImplemented'),
+            CTA(sid='SID_EDIT_CHANNEL_BTN', action_id='SelectEditChannelType'),
+            CTA(sid='SID_SHARE_CHANNEL_BTN', action_id='SelectShareChannelType'),
+        ]
+        self._state_init_select_channel(channels=channels, ctas=ctas)
 
-    @BaseStateMachine.state_handler('EditChannel')
-    def state_handler_edit_channel(self, event):
-        if self._state_handle_select_channel(event=event):
-            if self.channel:
-                self.set_state('SelectEditChannelType')
-        else:
-            self._state_handler_default(event=event)
+    @BaseStateMachine.state_handler('BrowseChannels')
+    def state_handler_browse_channels(self, event):
+        self._state_handler_default(event=event)
 
     @BaseStateMachine.state_initiator('SelectEditChannelType')
     def state_init_select_edit_channel_type(self):
@@ -497,6 +475,89 @@ class BotChat(BaseStateMachine):
     @BaseStateMachine.state_handler('SelectEditChannelType')
     def state_handler_select_edit_channel_type(self, event):
         self._state_handler_default(event=event)
+
+    @BaseStateMachine.state_initiator('SelectShareChannelType')
+    def state_init_select_edit_channel_type(self):
+        title = str(BotString('SID_SELECT_CHANNEL_SHARE_ACTION',
+                              user=self.user, channel=self.channel))
+        buttons = [
+            Template.ButtonShare(),
+            Template.ButtonWeb(
+                str(BotString('SID_SHARE_CHANNEL_BY_LINK',
+                              user=self.user,
+                              channel=self.channel)),
+                m_link(BotRef(sub=self.channel.uchid).ref)),
+            Template.ButtonPostBack(
+                str(BotString('SID_MORE',
+                              user=self.user,
+                              channel=self.channel)),
+                str(Payload(type='ClbQRep',
+                            state=self.state,
+                            action_id='SelectShareChannelTypeEx',
+                            channel=self.channel)))
+        ]
+        e = Template.GenericElement(title,
+                                    image_url=self.channel.cover_pic,
+                                    buttons=buttons)
+        self.page.send(self.user.fbid, Template.Generic([ e ]))
+
+    @BaseStateMachine.state_handler('SelectShareChannelType')
+    def state_handler_select_edit_channel_type(self, event):
+        self._state_handler_default(event=event)
+
+    @BaseStateMachine.state_initiator('SelectShareChannelTypeEx')
+    def state_init_select_edit_channel_type_ex(self):
+        title = str(BotString('SID_SELECT_CHANNEL_SHARE_ACTION',
+                              user=self.user, channel=self.channel))
+        buttons = [
+            Template.ButtonPostBack(
+                str(BotString('SID_SHARE_CHANNEL_BY_MSG_CODE',
+                              user=self.user,
+                              channel=self.channel)),
+                str(Payload(type='ClbQRep',
+                            state=self.state,
+                            action_id='ByMsgCode',
+                            channel=self.channel))),
+            Template.ButtonPostBack(
+                str(BotString('SID_SHARE_CHANNEL_BY_QR_CODE',
+                              user=self.user,
+                              channel=self.channel)),
+                str(Payload(type='ClbQRep',
+                            state=self.state,
+                            action_id='ByQRCode',
+                            channel=self.channel))),
+            Template.ButtonPostBack(
+                str(BotString('SID_SHARE_CHANNEL_BY_UCHID',
+                              user=self.user,
+                              channel=self.channel)),
+                str(Payload(type='ClbQRep',
+                            state=self.state,
+                            action_id='ByUChID',
+                            channel=self.channel)))
+        ]
+        e = Template.GenericElement(title,
+                                    image_url=self.channel.cover_pic,
+                                    buttons=buttons)
+        self.page.send(self.user.fbid, Template.Generic([ e ]))
+
+    @BaseStateMachine.state_handler('SelectShareChannelTypeEx')
+    def state_handler_select_edit_channel_type_ex(self, event):
+        if event.is_postback:
+            p = Payload.from_string(event.postback_payload)
+            if p.action_id == 'ByMsgCode':
+                self.page.send(self.user.fbid,
+                               Attachment.Image(self.channel.messenger_code))
+            elif p.action_id == 'ByQRCode':
+                self.page.send(self.user.fbid,
+                               Attachment.Image(self.channel.qr_code))
+            elif p.action_id == 'ByUChID':
+                self.page.send(self.user.fbid,
+                               str(BotString('SID_SHARE_BY_UCHID_TEXT',
+                                             user=self.user,
+                                             channel=self.channel)))
+            self.set_state('Root')
+        else:
+            self._state_handler_default(event=event)
 
     @BaseStateMachine.state_initiator('EditChannelName')
     def state_init_edit_channel_name(self):
@@ -546,15 +607,17 @@ class BotChat(BaseStateMachine):
 
     @BaseStateMachine.state_initiator('ListSubs')
     def state_init_list_subs(self):
-        self._state_init_select_channel(subscribed=True)
+        channels = Channel.all_subscribed(uid=self.user.oid)
+        ctas = [
+            CTA(sid='SID_VIEW_SUB_BTN', action_id='NotImplemented'),
+            CTA(sid='SID_DEL_SUB_BTN', action_id='DelSub'),
+            CTA(sid='SID_SHARE_SUB_BTN', action_id='NotImplemented'),
+        ]
+        self._state_init_select_channel(channels=channels, ctas=ctas)
 
     @BaseStateMachine.state_handler('ListSubs')
     def state_handler_list_subs(self, event):
-        if self._state_handle_select_channel(event=event):
-            if self.channel:
-                self.set_state('SubSelectAction')
-        else:
-            self._state_handler_default(event=event)
+        self._state_handler_default(event=event)
 
     @BaseStateMachine.state_initiator('AddSub')
     def state_init_add_sub(self):
@@ -576,18 +639,6 @@ class BotChat(BaseStateMachine):
                         self.set_state('Root')
                     else:
                         self.send_simple('SID_ERROR')
-
-    @BaseStateMachine.state_initiator('SubSelectAction')
-    def state_init_sub_select_action(self):
-        ctas = [
-            CTA(sid='SID_SUB_DELETE', action_id='DelSub'),
-            CTA(sid='SID_SUB_SHOW_ANNCS', action_id='Root')
-        ]
-        self.send_simple('SID_SELECT_SUB_ACTION_PROMPT', ctas)
-
-    @BaseStateMachine.state_handler('SubSelectAction')
-    def state_handler_sub_select_action(self, event):
-        self._state_handler_default(event=event)
 
     @BaseStateMachine.state_initiator('DelSub')
     def state_init_del_sub(self):
@@ -613,15 +664,15 @@ class BotChat(BaseStateMachine):
 
     @BaseStateMachine.state_initiator('AnncSelectChannel')
     def state_init_annc_select_channel(self):
-        self._state_init_select_channel(subscribed=False)
+        channels = Channel.find(owner_uid=self.user.oid)
+        ctas = [
+            CTA(sid='SID_SELECT_THIS', action_id='MakeAnnc'),
+        ]
+        self._state_init_select_channel(channels=channels, ctas=ctas)
 
     @BaseStateMachine.state_handler('AnncSelectChannel')
     def state_handler_annc_select_channel(self, event):
-        if self._state_handle_select_channel(event=event):
-            if self.channel:
-                self.set_state('MakeAnnc')
-        else:
-            self._state_handler_default(event=event)
+        self._state_handler_default(event=event)
 
     @BaseStateMachine.state_initiator('MakeAnnc')
     def state_init_make_annc(self):

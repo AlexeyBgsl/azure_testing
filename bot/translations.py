@@ -28,7 +28,7 @@ DefaultStrings = dict(
     SID_IDLE_PROMPT='What do you want to do next?',
     SID_MAKE_ANNOUNCEMENT='Make an Announcement',
     SID_CREATE_CHANNEL='Create Channel',
-    SID_EDIT_CHANNEL='Edit Channel',
+    SID_BROWSE_CHANNELS='Browse Channels',
     SID_MY_SUBSCRIPTIONS='Subscriptions',
     SID_MY_CHANNELS_PROMPT=('Information channel is a media for your '
                             'announcements.\n'
@@ -45,12 +45,16 @@ DefaultStrings = dict(
     SID_GET_CHANNEL_PIC=('You can share a picture that will be used as a '
                          'channel cover picture, if you wish'),
     SID_CHANNEL_CREATED='Channel $CHANNEL_NAME ($CHANNEL_ID) is ready to use',
-    SID_SELECT_CHANNEL_PROMPT=('Please select a desired Channel from list '
-                               'or enter Channel ID'),
     SID_SELECT_CHANNEL_EDIT_ACTION='What do you want to do with channel $CHANNEL_NAME?',
     SID_EDIT_CHANNEL_NAME='Change Name',
     SID_EDIT_CHANNEL_DESC='Change Description',
     SID_EDIT_CHANNEL_DELETE='Delete Channel',
+    SID_SHARE_CHANNEL_BY_MSG_CODE='By Messenger Code',
+    SID_SHARE_CHANNEL_BY_LINK='By Link',
+    SID_SHARE_CHANNEL_BY_QR_CODE='By QR Coode',
+    SID_SHARE_CHANNEL_BY_UCHID='By Channel ID',
+    SID_SHARE_BY_UCHID_TEXT='Channel ID is $CHANNEL_ID. You can copy it here to send via any other service.',
+    SID_SELECT_CHANNEL_SHARE_ACTION='How do you want to share channel $CHANNEL_NAME?',
     SID_EDIT_CHANNEL_NAME_PROMPT='Please enter new Channel Name',
     SID_CHANNEL_NAME_CHANGED='Channel $CHANNEL_ID name changed successfully',
     SID_EDIT_CHANNEL_DESC_PROMPT='Please enter new Channel Description',
@@ -65,12 +69,8 @@ DefaultStrings = dict(
     SID_SUB_ADDED="Subscription to channel $CHANNEL_NAME added",
     SID_SUB_EXISTS="You are already subscribed to channel $CHANNEL_NAME",
     SID_ENTER_CHANNEL_ID_PROMPT="Enter desired Channel ID",
-    SID_SELECT_SUB_PROMPT=('Please select a desired Subscription from list '
-                           'or enter Channel ID'),
     SID_NO_SUBS_PROMPT="You have no active subscriptions",
     SID_SELECT_SUB_ACTION_PROMPT='What do you want to do next?',
-    SID_SUB_DELETE='Unsubscribe',
-    SID_SUB_SHOW_ANNCS='Show Announcements',
     SID_SUB_UNSUBSCRIBE_PROMPT='Are you sure?',
     SID_SUB_REMOVED="Done",
     SID_SUB_UNCHANGED="Subscription remained",
@@ -86,8 +86,14 @@ DefaultStrings = dict(
                       "Title: $ANNC_TITLE\n\n"
                       "$ANNC_TEXT\n"),
     SID_SELECT_THIS="Select",
-    SID_BACK="Back",
-    SID_NEXT="Next",
+    SID_VIEW_SUB_BTN="View",
+    SID_DEL_SUB_BTN="Unsubscribe",
+    SID_SHARE_SUB_BTN="Share",
+    SID_VIEW_CHANNEL_BTN="View",
+    SID_EDIT_CHANNEL_BTN="Edit",
+    SID_SHARE_CHANNEL_BTN="Share",
+    SID_MORE="More",
+
 )
 
 
