@@ -184,7 +184,7 @@ class Annc(BasicEntry):
         EntryField('title', None),
         EntryField('chid', None),
         EntryField('owner_uid', None),
-        EntryField('desc', '')
+        EntryField('text', '')
     ]
 
     def __init__(self, title=None, chid=None, owner_uid=None, entity=None):
