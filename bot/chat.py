@@ -228,6 +228,11 @@ class BotChat(BaseStateMachine):
     def class_name(cls):
         return cls.__name__
 
+    @property
+    def howto_qreps(self):
+        return CTAList(self,[CTA(sid='SID_HOW_TO',
+                                 action_id=HOW_TO_ACTION_ID)]).quick_replies
+
     def set_state(self, state):
         if state != self.state:
             super().set_state(state=state)
@@ -241,9 +246,7 @@ class BotChat(BaseStateMachine):
     def send_simple(self, msg_sid, ctas = None, howto=True):
         qreps = None
         if howto:
-            qreps = CTAList(self,
-                            [CTA(sid='SID_HOW_TO',
-                                 action_id=HOW_TO_ACTION_ID)]).quick_replies
+            qreps = self.howto_qreps
         msg = str(BotString(msg_sid, user=self.user, channel=self.channel))
         if ctas:
             self.page.send(self.user.fbid,
