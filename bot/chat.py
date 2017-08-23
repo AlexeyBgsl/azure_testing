@@ -607,8 +607,8 @@ class BotChat(BaseStateMachine):
 
     @BaseStateMachine.state_handler('DeleteChannel')
     def state_handler_delete_channel(self, event):
-        if event.is_quick_reply:
-            p = Payload.from_string(event.quick_reply_payload)
+        if event.is_postback:
+            p = Payload.from_string(event.postback_payload)
             if p.action_id == 'YesPseudoChatState':
                 self.channel.delete()
                 self.channel = None
@@ -664,8 +664,8 @@ class BotChat(BaseStateMachine):
 
     @BaseStateMachine.state_handler('DelSub')
     def state_handler_del_sub(self, event):
-        if event.is_quick_reply:
-            p = Payload.from_string(event.quick_reply_payload)
+        if event.is_postback:
+            p = Payload.from_string(event.postback_payload)
             if p.action_id == 'YesPseudoChatState':
                 self.channel.unsubscribe(self.user.oid)
                 self.channel = None
