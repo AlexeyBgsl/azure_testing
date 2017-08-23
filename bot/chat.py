@@ -306,6 +306,84 @@ class BotChat(BaseStateMachine):
         else:
             pass
 
+    def _state_init_select_share_channel_type(self, title_sid, ex_state):
+        title = str(BotString(title_sid, user=self.user, channel=self.channel))
+        buttons = [
+            Template.ButtonShare(),
+            Template.ButtonWeb(
+                str(BotString('SID_SHARE_CHANNEL_BY_LINK',
+                              user=self.user,
+                              channel=self.channel)),
+                m_link(BotRef(sub=self.channel.uchid).ref)),
+            Template.ButtonPostBack(
+                str(BotString('SID_MORE',
+                              user=self.user,
+                              channel=self.channel)),
+                str(Payload(type='ClbQRep',
+                            state=self.state,
+                            action_id=ex_state,
+                            channel=self.channel)))
+        ]
+        e = Template.GenericElement(title,
+                                    image_url=self.channel.cover_pic,
+                                    buttons=buttons)
+        self.page.send(self.user.fbid, Template.Generic([ e ]))
+
+    def _state_handler_select_share_channel_type(self, event):
+        self._state_handler_default(event=event)
+
+    def _state_init_select_share_channel_type_ex(self, title_sid):
+        title = str(BotString(title_sid, user=self.user, channel=self.channel))
+        buttons = [
+            Template.ButtonPostBack(
+                str(BotString('SID_SHARE_CHANNEL_BY_MSG_CODE',
+                              user=self.user,
+                              channel=self.channel)),
+                str(Payload(type='ClbQRep',
+                            state=self.state,
+                            action_id='ByMsgCode',
+                            channel=self.channel))),
+            Template.ButtonPostBack(
+                str(BotString('SID_SHARE_CHANNEL_BY_QR_CODE',
+                              user=self.user,
+                              channel=self.channel)),
+                str(Payload(type='ClbQRep',
+                            state=self.state,
+                            action_id='ByQRCode',
+                            channel=self.channel))),
+            Template.ButtonPostBack(
+                str(BotString('SID_SHARE_CHANNEL_BY_UCHID',
+                              user=self.user,
+                              channel=self.channel)),
+                str(Payload(type='ClbQRep',
+                            state=self.state,
+                            action_id='ByUChID',
+                            channel=self.channel)))
+        ]
+        e = Template.GenericElement(title,
+                                    image_url=self.channel.cover_pic,
+                                    buttons=buttons)
+        self.page.send(self.user.fbid, Template.Generic([ e ]))
+
+    def _state_handler_select_share_channel_type_ex(self, event,
+                                                    next_state='Root'):
+        if event.is_postback:
+            p = Payload.from_string(event.postback_payload)
+            if p.action_id == 'ByMsgCode':
+                self.page.send(self.user.fbid,
+                               Attachment.Image(self.channel.messenger_code))
+            elif p.action_id == 'ByQRCode':
+                self.page.send(self.user.fbid,
+                               Attachment.Image(self.channel.qr_code))
+            elif p.action_id == 'ByUChID':
+                self.page.send(self.user.fbid,
+                               str(BotString('SID_SHARE_BY_UCHID_TEXT',
+                                             user=self.user,
+                                             channel=self.channel)))
+            self.set_state(next_state)
+        else:
+            self._state_handler_default(event=event)
+
     @BaseStateMachine.state_initiator('Acquaintance')
     def state_init_acquaintance(self):
         ctas = [
@@ -477,87 +555,23 @@ class BotChat(BaseStateMachine):
         self._state_handler_default(event=event)
 
     @BaseStateMachine.state_initiator('SelectShareChannelType')
-    def state_init_select_edit_channel_type(self):
-        title = str(BotString('SID_SELECT_CHANNEL_SHARE_ACTION',
-                              user=self.user, channel=self.channel))
-        buttons = [
-            Template.ButtonShare(),
-            Template.ButtonWeb(
-                str(BotString('SID_SHARE_CHANNEL_BY_LINK',
-                              user=self.user,
-                              channel=self.channel)),
-                m_link(BotRef(sub=self.channel.uchid).ref)),
-            Template.ButtonPostBack(
-                str(BotString('SID_MORE',
-                              user=self.user,
-                              channel=self.channel)),
-                str(Payload(type='ClbQRep',
-                            state=self.state,
-                            action_id='SelectShareChannelTypeEx',
-                            channel=self.channel)))
-        ]
-        e = Template.GenericElement(title,
-                                    image_url=self.channel.cover_pic,
-                                    buttons=buttons)
-        self.page.send(self.user.fbid, Template.Generic([ e ]))
+    def state_init_select_share_channel_type(self):
+        self._state_init_select_share_channel_type(
+            title_sid='SID_SELECT_CHANNEL_SHARE_ACTION',
+            ex_state='SelectShareChannelTypeEx')
 
     @BaseStateMachine.state_handler('SelectShareChannelType')
-    def state_handler_select_edit_channel_type(self, event):
-        self._state_handler_default(event=event)
+    def state_handler_select_share_channel_type(self, event):
+        self._state_handler_select_share_channel_type(event=event)
 
     @BaseStateMachine.state_initiator('SelectShareChannelTypeEx')
-    def state_init_select_edit_channel_type_ex(self):
-        title = str(BotString('SID_SELECT_CHANNEL_SHARE_ACTION',
-                              user=self.user, channel=self.channel))
-        buttons = [
-            Template.ButtonPostBack(
-                str(BotString('SID_SHARE_CHANNEL_BY_MSG_CODE',
-                              user=self.user,
-                              channel=self.channel)),
-                str(Payload(type='ClbQRep',
-                            state=self.state,
-                            action_id='ByMsgCode',
-                            channel=self.channel))),
-            Template.ButtonPostBack(
-                str(BotString('SID_SHARE_CHANNEL_BY_QR_CODE',
-                              user=self.user,
-                              channel=self.channel)),
-                str(Payload(type='ClbQRep',
-                            state=self.state,
-                            action_id='ByQRCode',
-                            channel=self.channel))),
-            Template.ButtonPostBack(
-                str(BotString('SID_SHARE_CHANNEL_BY_UCHID',
-                              user=self.user,
-                              channel=self.channel)),
-                str(Payload(type='ClbQRep',
-                            state=self.state,
-                            action_id='ByUChID',
-                            channel=self.channel)))
-        ]
-        e = Template.GenericElement(title,
-                                    image_url=self.channel.cover_pic,
-                                    buttons=buttons)
-        self.page.send(self.user.fbid, Template.Generic([ e ]))
+    def state_init_select_share_channel_type_ex(self):
+        self._state_init_select_share_channel_type_ex(
+            title_sid='SID_SELECT_CHANNEL_SHARE_ACTION')
 
     @BaseStateMachine.state_handler('SelectShareChannelTypeEx')
-    def state_handler_select_edit_channel_type_ex(self, event):
-        if event.is_postback:
-            p = Payload.from_string(event.postback_payload)
-            if p.action_id == 'ByMsgCode':
-                self.page.send(self.user.fbid,
-                               Attachment.Image(self.channel.messenger_code))
-            elif p.action_id == 'ByQRCode':
-                self.page.send(self.user.fbid,
-                               Attachment.Image(self.channel.qr_code))
-            elif p.action_id == 'ByUChID':
-                self.page.send(self.user.fbid,
-                               str(BotString('SID_SHARE_BY_UCHID_TEXT',
-                                             user=self.user,
-                                             channel=self.channel)))
-            self.set_state('Root')
-        else:
-            self._state_handler_default(event=event)
+    def state_handler_select_share_channel_type_ex(self, event):
+        self._state_handler_select_share_channel_type_ex(event)
 
     @BaseStateMachine.state_initiator('EditChannelName')
     def state_init_edit_channel_name(self):
