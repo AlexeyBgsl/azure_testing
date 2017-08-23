@@ -625,13 +625,32 @@ class BotChat(BaseStateMachine):
         ctas = [
             CTA(sid='SID_VIEW_SUB_BTN', action_id='NotImplemented'),
             CTA(sid='SID_DEL_SUB_BTN', action_id='DelSub'),
-            CTA(sid='SID_SHARE_SUB_BTN', action_id='NotImplemented'),
+            CTA(sid='SID_SHARE_SUB_BTN', action_id='SelectShareSubType'),
         ]
         self._state_init_select_channel(channels=channels, ctas=ctas)
 
     @BaseStateMachine.state_handler('ListSubs')
     def state_handler_list_subs(self, event):
         self._state_handler_default(event=event)
+
+    @BaseStateMachine.state_initiator('SelectShareSubType')
+    def state_init_select_share_sub_type(self):
+        self._state_init_select_share_channel_type(
+            title_sid='SID_SELECT_CHANNEL_SHARE_ACTION',
+            ex_state='SelectShareSubTypeEx')
+
+    @BaseStateMachine.state_handler('SelectShareSubType')
+    def state_handler_select_share_sub_type(self, event):
+        self._state_handler_select_share_channel_type(event=event)
+
+    @BaseStateMachine.state_initiator('SelectShareSubTypeEx')
+    def state_init_select_share_channel_type_ex(self):
+        self._state_init_select_share_channel_type_ex(
+            title_sid='SID_SELECT_CHANNEL_SHARE_ACTION')
+
+    @BaseStateMachine.state_handler('SelectShareSubTypeEx')
+    def state_handler_select_share_channel_type_ex(self, event):
+        self._state_handler_select_share_channel_type_ex(event)
 
     @BaseStateMachine.state_initiator('AddSub')
     def state_init_add_sub(self):
