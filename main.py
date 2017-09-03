@@ -2,6 +2,7 @@ import logging
 from flask import Flask
 from logging.handlers import RotatingFileHandler
 from bot import create_bot
+from web import create_webaux
 import config
 
 def config_logger():
@@ -26,6 +27,7 @@ def create_app(config):
     logging.info("Registering App: %s", __name__)
 
     create_bot(app)
+    create_webaux(app)
 
     # Add a default root route.
     @app.route("/")
