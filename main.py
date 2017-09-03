@@ -1,6 +1,7 @@
 import logging
+from flask import Flask
 from logging.handlers import RotatingFileHandler
-from bot import create_app
+from bot import create_bot
 import config
 
 def config_logger():
@@ -16,6 +17,23 @@ def config_logger():
     logger.addHandler(handler)
     if config.DEBUG:
         logger.setLevel(logging.DEBUG)
+
+
+def create_app(config):
+    app = Flask(__name__)
+    app.config.from_object(config)
+
+    logging.info("Registering App: %s", __name__)
+
+    create_bot(app)
+
+    # Add a default root route.
+    @app.route("/")
+    def index():
+        return "Hello Azure!"
+
+    logging.info("Done")
+    return app
 
 
 config_logger()

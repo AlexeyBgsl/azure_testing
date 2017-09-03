@@ -1,6 +1,8 @@
 """
-Application configuration
+Bot configuration
 """
+
+import os
 
 ACCESS_TOKEN_PRD = ('EAAUEkHk0iswBAIg6ZCMx7cAGysgWohTJq1rWN4GgAGm21Cnc72HHjrZB'
                     'jsIbLV8SoYwvux2j9ONAVyU9evSGzrQa03RZCigzsU47l2WfLqZBiP5w8'
@@ -17,9 +19,11 @@ CONFIG = dict(
 )
 
 
-def set_env(is_production):
-    CONFIG['ACCESS_TOKEN'] =\
-        ACCESS_TOKEN_PRD if is_production else ACCESS_TOKEN_DBG
+def init_config():
+    if os.getenv('PRODUCTION_APP_ENV', '') == '1':
+        CONFIG['ACCESS_TOKEN'] = ACCESS_TOKEN_PRD
+    else:
+        CONFIG['ACCESS_TOKEN'] = ACCESS_TOKEN_DBG
 
 
 def is_correct_token(token):
