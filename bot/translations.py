@@ -17,7 +17,12 @@ DefaultStrings = dict(
                              'create your one way information channels or '
                              'subscribe to someone’s else. It is very simple '
                              'to start announce with us'),
+    SID_FEEDBACK_PROMPT='Please send your feedback to us',
+    SID_FEEDBACK_DONE=('Thanks a lot for your feedback!\n'''
+                       'We\'ll learn it ASAP and get back to you shortly with '
+                       'our thoughts on it.'),
     SID_HOW_TO='How To',
+    SID_FEEDBACK='Feedback',
     SID_DONE='Done',
     SID_MY_CHANNELS='Channels',
     SID_SUBSCRIBE='Subscribe',

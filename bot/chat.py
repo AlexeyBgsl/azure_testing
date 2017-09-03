@@ -2,7 +2,7 @@ import logging
 from collections import namedtuple
 from fbmq import QuickReply, Template, Attachment
 from bot.translations import BotString
-from db import Channel, Annc, UpdateOps, m_link
+from db import Channel, Annc, UpdateOps, Feedback, m_link
 from bot.horn import Horn
 
 
@@ -14,6 +14,7 @@ BotChatClbTypes = dict(
 
 
 HOW_TO_ACTION_ID='HowToAction'
+FEEDBACK_ACTION_ID='FeedbackAction'
 
 
 class Payload(object):
@@ -229,9 +230,12 @@ class BotChat(BaseStateMachine):
         return cls.__name__
 
     @property
-    def howto_qreps(self):
+    def std_qreps(self):
         return CTAList(self,[CTA(sid='SID_HOW_TO',
-                                 action_id=HOW_TO_ACTION_ID)]).quick_replies
+                                 action_id=HOW_TO_ACTION_ID),
+                             CTA(sid='SID_FEEDBACK',
+                                 action_id=FEEDBACK_ACTION_ID)
+                             ]).quick_replies
 
     def set_state(self, state):
         if state != self.state:
@@ -243,10 +247,10 @@ class BotChat(BaseStateMachine):
                     channel=self.channel, annc=self.annc)
         self.user.update(UpdateOps.Supported.SET, state_payload=str(p))
 
-    def send_simple(self, msg_sid, ctas = None, howto=True):
+    def send_simple(self, msg_sid, ctas = None, std_quick_replies=True):
         qreps = None
-        if howto:
-            qreps = self.howto_qreps
+        if std_quick_replies:
+            qreps = self.std_qreps
         msg = str(BotString(msg_sid, user=self.user, channel=self.channel))
         if ctas:
             self.page.send(self.user.fbid,
@@ -277,7 +281,7 @@ class BotChat(BaseStateMachine):
                 elements.append(t)
             skip = last
             self.page.send(self.user.fbid, Template.Generic(elements),
-                           quick_replies=self.howto_qreps)
+                           quick_replies=self.std_qreps)
 
     def _state_handle_select_channel(self, event):
         if event.is_postback:
@@ -296,8 +300,13 @@ class BotChat(BaseStateMachine):
     def _state_handler_default(self, event):
         if event.is_quick_reply:
             p = Payload.from_string(event.quick_reply_payload)
-            assert p.action_id == HOW_TO_ACTION_ID
-            self.call_helper(event)
+            if p.action_id == HOW_TO_ACTION_ID:
+                self.call_helper(event)
+            elif p.action_id == FEEDBACK_ACTION_ID:
+                self.set_state('Feedback')
+            else:
+                raise TypeError(
+                    "Incorrect Quick Reply: {}".format(p.action_id))
         elif event.is_postback:
             p = Payload.from_string(event.postback_payload)
             self.set_state(p.action_id)
@@ -391,7 +400,8 @@ class BotChat(BaseStateMachine):
             CTA(sid='SID_MY_SUBSCRIPTIONS', action_id='MySubscriptions'),
             CTA(sid='SID_HOW_TO', action_id=HOW_TO_ACTION_ID)
         ]
-        self.send_simple('SID_ACQUAINTANCE_PROMPT', ctas=ctas, howto=False)
+        self.send_simple('SID_ACQUAINTANCE_PROMPT', ctas=ctas,
+                         std_quick_replies=False)
 
     @BaseStateMachine.state_handler('Acquaintance')
     def state_handler_acquaintance(self, event):
@@ -401,6 +411,21 @@ class BotChat(BaseStateMachine):
                 self.call_helper(event)
                 return
         self._state_handler_default(event=event)
+
+    @BaseStateMachine.state_initiator('Feedback')
+    def state_init_feedback(self):
+        self.send_simple('SID_FEEDBACK_PROMPT', std_quick_replies=False)
+
+    @BaseStateMachine.state_handler('Feedback')
+    def state_handler_feedback(self, event):
+        if event.is_text_message:
+            f = Feedback(owner_uid=self.user.oid,
+                         text=event.message_text.strip())
+            f.save()
+            self.send_simple('SID_FEEDBACK_DONE')
+            self.set_state('Root')
+        else:
+            self._state_handler_default(event=event)
 
     @BaseStateMachine.state_initiator('Root')
     def state_init_root(self):
@@ -414,7 +439,6 @@ class BotChat(BaseStateMachine):
     @BaseStateMachine.state_handler('Root')
     def state_handler_root(self, event):
         self._state_handler_default(event=event)
-
 
     @BaseStateMachine.state_initiator('NotImplemented')
     def state_init_not_implemented(self):
