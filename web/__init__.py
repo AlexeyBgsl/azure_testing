@@ -3,7 +3,8 @@ Locano Web Aux routes implementation
 """
 import logging
 from flask import Blueprint
-from flask import render_template, redirect, url_for, request
+from flask import render_template, redirect, url_for, request, abort
+from db import Channel
 
 
 CHANNELS_ROOT = '/channels'
@@ -16,12 +17,13 @@ channels = Blueprint('channel', __name__,
 
 
 @channels.route('/')
-@channels.route('/<int:chid>')
-def channel_root(chid=None):
-    if chid:
-        return render_template('channel.html', chid=chid)
-    else:
-        return render_template('page_not_found.html'), 404
+@channels.route('/<uchid>')
+def channel_root(uchid=None):
+    if uchid:
+        c = Channel.by_uchid_str(uchid)
+        if c:
+            return render_template('channel.html', channel=c)
+    abort(404)
 
 
 @channels.route('/scripts/<rest>')
