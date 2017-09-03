@@ -43,14 +43,15 @@ DefaultStrings = dict(
     SID_HELP_CHANNEL_EXAMPLES='Examples',
     SID_HELP_CHANNELS_PROMPT=('Channels are used to broadcast announcements.\n'
                               'Announcements arrive to all the Channel Subscribers'),
-    SID_GET_CHANNEL_NAME='Enter desired channel name',
-    SID_GET_CHANNEL_DESC=('Channel $CHANNEL_NAME created.\n'
+    SID_GET_CHANNEL_NAME_PROMPT='Enter desired channel name',
+    SID_GET_CHANNEL_DESC_PROMPT=('Channel $CHANNEL_NAME created.\n'
                           'Channel ID is $CHANNEL_ID.\n'
                           'Enter channel description'),
-    SID_GET_CHANNEL_PIC=('You can share a picture that will be used as a '
-                         'channel cover picture, if you wish'),
+    SID_GET_CHANNEL_PIC_PROMPT=('You can share a picture that will be used as '
+                                'a channel cover picture, if you wish'),
     SID_CHANNEL_CREATED='Channel $CHANNEL_NAME ($CHANNEL_ID) is ready to use',
-    SID_SELECT_CHANNEL_EDIT_ACTION='What do you want to do with channel $CHANNEL_NAME?',
+    SID_SELECT_CHANNEL_EDIT_ACTION_PROMPT=('What do you want to do with '
+                                           'channel $CHANNEL_NAME?'),
     SID_EDIT_CHANNEL_NAME='Change Name',
     SID_EDIT_CHANNEL_DESC='Change Description',
     SID_EDIT_CHANNEL_DELETE='Delete Channel',
@@ -59,7 +60,8 @@ DefaultStrings = dict(
     SID_SHARE_CHANNEL_BY_QR_CODE='By QR Coode',
     SID_SHARE_CHANNEL_BY_UCHID='By Channel ID',
     SID_SHARE_BY_UCHID_TEXT='Channel ID is $CHANNEL_ID. You can copy it here to send via any other service.',
-    SID_SELECT_CHANNEL_SHARE_ACTION='How do you want to share channel $CHANNEL_NAME?',
+    SID_SELECT_CHANNEL_SHARE_ACTION_PROMPT=('How do you want to share channel '
+                                            '$CHANNEL_NAME?'),
     SID_EDIT_CHANNEL_NAME_PROMPT='Please enter new Channel Name',
     SID_CHANNEL_NAME_CHANGED='Channel $CHANNEL_ID name changed successfully',
     SID_EDIT_CHANNEL_DESC_PROMPT='Please enter new Channel Description',

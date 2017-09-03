@@ -497,7 +497,7 @@ class BotChat(BaseStateMachine):
 
     @BaseStateMachine.state_initiator('CreateChannel')
     def state_init_create_channel(self):
-        self.send_simple('SID_GET_CHANNEL_NAME')
+        self.send_simple('SID_GET_CHANNEL_NAME_PROMPT')
 
     @BaseStateMachine.state_handler('CreateChannel')
     def state_handler_create_channel(self, event):
@@ -516,7 +516,7 @@ class BotChat(BaseStateMachine):
 
     @BaseStateMachine.state_initiator('SetChannelDesc')
     def state_init_set_channel_desc(self):
-        self.send_simple('SID_GET_CHANNEL_DESC')
+        self.send_simple('SID_GET_CHANNEL_DESC_PROMPT')
 
     @BaseStateMachine.state_handler('SetChannelDesc')
     def state_handler_set_channel_desc(self, event):
@@ -531,7 +531,7 @@ class BotChat(BaseStateMachine):
     @BaseStateMachine.state_initiator('SetChannelPic')
     def state_init_set_channel_pic(self):
         ctas = [CTA(sid='SID_DONE', action_id='Root')]
-        self.send_simple('SID_GET_CHANNEL_PIC', ctas=ctas)
+        self.send_simple('SID_GET_CHANNEL_PIC_PROMPT', ctas=ctas)
 
     @BaseStateMachine.state_handler('SetChannelPic')
     def state_handler_set_channel_pic(self, event):
@@ -572,7 +572,7 @@ class BotChat(BaseStateMachine):
             CTA(sid='SID_EDIT_CHANNEL_DESC', action_id='EditChannelDesc'),
             CTA(sid='SID_EDIT_CHANNEL_DELETE', action_id='DeleteChannel')
         ]
-        self.send_simple('SID_SELECT_CHANNEL_EDIT_ACTION', ctas=ctas)
+        self.send_simple('SID_SELECT_CHANNEL_EDIT_ACTION_PROMPT', ctas=ctas)
 
     @BaseStateMachine.state_handler('SelectEditChannelType')
     def state_handler_select_edit_channel_type(self, event):
@@ -581,7 +581,7 @@ class BotChat(BaseStateMachine):
     @BaseStateMachine.state_initiator('SelectShareChannelType')
     def state_init_select_share_channel_type(self):
         self._state_init_select_share_channel_type(
-            title_sid='SID_SELECT_CHANNEL_SHARE_ACTION',
+            title_sid='SID_SELECT_CHANNEL_SHARE_ACTION_PROMPT',
             ex_state='SelectShareChannelTypeEx')
 
     @BaseStateMachine.state_handler('SelectShareChannelType')
@@ -591,7 +591,7 @@ class BotChat(BaseStateMachine):
     @BaseStateMachine.state_initiator('SelectShareChannelTypeEx')
     def state_init_select_share_channel_type_ex(self):
         self._state_init_select_share_channel_type_ex(
-            title_sid='SID_SELECT_CHANNEL_SHARE_ACTION')
+            title_sid='SID_SELECT_CHANNEL_SHARE_ACTION_PROMPT')
 
     @BaseStateMachine.state_handler('SelectShareChannelTypeEx')
     def state_handler_select_share_channel_type_ex(self, event):
@@ -660,7 +660,7 @@ class BotChat(BaseStateMachine):
     @BaseStateMachine.state_initiator('SelectShareSubType')
     def state_init_select_share_sub_type(self):
         self._state_init_select_share_channel_type(
-            title_sid='SID_SELECT_CHANNEL_SHARE_ACTION',
+            title_sid='SID_SELECT_CHANNEL_SHARE_ACTION_PROMPT',
             ex_state='SelectShareSubTypeEx')
 
     @BaseStateMachine.state_handler('SelectShareSubType')
@@ -670,7 +670,7 @@ class BotChat(BaseStateMachine):
     @BaseStateMachine.state_initiator('SelectShareSubTypeEx')
     def state_init_select_share_channel_type_ex(self):
         self._state_init_select_share_channel_type_ex(
-            title_sid='SID_SELECT_CHANNEL_SHARE_ACTION')
+            title_sid='SID_SELECT_CHANNEL_SHARE_ACTION_PROMPT')
 
     @BaseStateMachine.state_handler('SelectShareSubTypeEx')
     def state_handler_select_share_channel_type_ex(self, event):
