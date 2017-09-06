@@ -13,10 +13,16 @@ DefaultStrings = dict(
     SID_MENU_ANNOUNCEMENTS='Make an Announcement',
     SID_MENU_HELP='How To',
     SID_DBG_NO_ACTION='[DBG] Not Implemented Yet',
-    SID_ACQUAINTANCE_PROMPT=('Locano is quick notifications service. You can '
-                             'create your one way information channels or '
-                             'subscribe to someone’s else. It is very simple '
-                             'to start announce with us'),
+    SID_ACQUAINTANCE_PROMPT=(
+        'Welcome to Locano Bot. Today, having your own bot is like owning '
+        'bitcoins — it’s every bit as cool. Locano Bot is an announcement '
+        'service. Here you can subscribe to someone else’s information '
+        'channels or create your own ones, which will only take a few simple '
+        'steps. For a user to be able to subscribe to your channel, you’ll '
+        'need to provide him/her with the channel’s ID which you got when '
+        'creating the channel. Being based on Facebook Messenger, Locano Bot '
+        'is a worldwide service available on any platform. Locano Bot is at '
+        'your service:'),
     SID_FEEDBACK_PROMPT='Please send your feedback to us',
     SID_FEEDBACK_DONE=('Thanks a lot for your feedback!\n'''
                        'We\'ll learn it ASAP and get back to you shortly with '
@@ -27,28 +33,24 @@ DefaultStrings = dict(
     SID_MY_CHANNELS='Channels',
     SID_SUBSCRIBE='Subscribe',
     SID_UNSUBSCRIBE='Unsubscribe',
-    SID_ROOT_PROMPT=('Hi! Welcome to Locano Bot. '
-                     'We do information channels. You can create yours '
-                     'or subscribe to someones else\'s. Try these commands:'),
-    SID_IDLE_PROMPT='What do you want to do next?',
+    SID_ROOT_PROMPT='Locano Bot is at your service:',
     SID_MAKE_ANNOUNCEMENT='Make an Announcement',
     SID_CREATE_CHANNEL='Create Channel',
     SID_BROWSE_CHANNELS='Browse Channels',
     SID_MY_SUBSCRIPTIONS='Subscriptions',
-    SID_MY_CHANNELS_PROMPT=('Information channel is a media for your '
-                            'announcements.\n'
-                            'Make one or browse existing to share or edit '
-                            'them.'),
+    SID_MY_CHANNELS_PROMPT=(
+        'Information channel is a means of delivering announcements to '
+        'subscribers.  Browse your channels to share or edit them or create a '
+        'new one.'),
     SID_HELP_CHANNEL_DETAILS='More',
     SID_HELP_CHANNEL_EXAMPLES='Examples',
     SID_HELP_CHANNELS_PROMPT=('Channels are used to broadcast announcements.\n'
                               'Announcements arrive to all the Channel Subscribers'),
-    SID_GET_CHANNEL_NAME_PROMPT='Enter desired channel name',
-    SID_GET_CHANNEL_DESC_PROMPT=('Channel $CHANNEL_NAME created.\n'
-                          'Channel ID is $CHANNEL_ID.\n'
-                          'Enter channel description'),
-    SID_GET_CHANNEL_PIC_PROMPT=('You can share a picture that will be used as '
-                                'a channel cover picture, if you wish'),
+    SID_GET_CHANNEL_NAME_PROMPT='Enter channel name',
+    SID_GET_CHANNEL_DESC_PROMPT='Enter channel description',
+    SID_GET_CHANNEL_PIC_PROMPT=(
+        'Add a picture that will serve as the channel\'s cover image or'
+        'press Done'),
     SID_CHANNEL_CREATED='Channel $CHANNEL_NAME ($CHANNEL_ID) is ready to use',
     SID_SELECT_CHANNEL_EDIT_ACTION_PROMPT=('What do you want to do with '
                                            'channel $CHANNEL_NAME?'),

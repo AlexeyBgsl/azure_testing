@@ -13,7 +13,6 @@ BotChatClbTypes = dict(
 )
 
 
-HOW_TO_ACTION_ID='HowToAction'
 FEEDBACK_ACTION_ID='FeedbackAction'
 
 
@@ -231,9 +230,7 @@ class BotChat(BaseStateMachine):
 
     @property
     def std_qreps(self):
-        return CTAList(self,[CTA(sid='SID_HOW_TO',
-                                 action_id=HOW_TO_ACTION_ID),
-                             CTA(sid='SID_FEEDBACK',
+        return CTAList(self,[CTA(sid='SID_FEEDBACK',
                                  action_id=FEEDBACK_ACTION_ID)
                              ]).quick_replies
 
@@ -300,9 +297,7 @@ class BotChat(BaseStateMachine):
     def _state_handler_default(self, event):
         if event.is_quick_reply:
             p = Payload.from_string(event.quick_reply_payload)
-            if p.action_id == HOW_TO_ACTION_ID:
-                self.call_helper(event)
-            elif p.action_id == FEEDBACK_ACTION_ID:
+            if p.action_id == FEEDBACK_ACTION_ID:
                 self.set_state('Feedback')
             else:
                 raise TypeError(
@@ -398,18 +393,12 @@ class BotChat(BaseStateMachine):
         ctas = [
             CTA(sid='SID_MY_CHANNELS', action_id='MyChannels'),
             CTA(sid='SID_MY_SUBSCRIPTIONS', action_id='MySubscriptions'),
-            CTA(sid='SID_HOW_TO', action_id=HOW_TO_ACTION_ID)
         ]
         self.send_simple('SID_ACQUAINTANCE_PROMPT', ctas=ctas,
                          std_quick_replies=False)
 
     @BaseStateMachine.state_handler('Acquaintance')
     def state_handler_acquaintance(self, event):
-        if event.is_postback:
-            p = Payload.from_string(event.postback_payload)
-            if p.action_id == HOW_TO_ACTION_ID:
-                self.call_helper(event)
-                return
         self._state_handler_default(event=event)
 
     @BaseStateMachine.state_initiator('Feedback')
@@ -497,7 +486,8 @@ class BotChat(BaseStateMachine):
 
     @BaseStateMachine.state_initiator('CreateChannel')
     def state_init_create_channel(self):
-        self.send_simple('SID_GET_CHANNEL_NAME_PROMPT')
+        self.send_simple('SID_GET_CHANNEL_NAME_PROMPT',
+                         std_quick_replies=False)
 
     @BaseStateMachine.state_handler('CreateChannel')
     def state_handler_create_channel(self, event):
@@ -516,7 +506,8 @@ class BotChat(BaseStateMachine):
 
     @BaseStateMachine.state_initiator('SetChannelDesc')
     def state_init_set_channel_desc(self):
-        self.send_simple('SID_GET_CHANNEL_DESC_PROMPT')
+        self.send_simple('SID_GET_CHANNEL_DESC_PROMPT',
+                         std_quick_replies=False)
 
     @BaseStateMachine.state_handler('SetChannelDesc')
     def state_handler_set_channel_desc(self, event):
