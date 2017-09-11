@@ -2,7 +2,7 @@ from abc import ABC
 from enum import Enum
 from pymongo import MongoClient
 from bson.objectid import ObjectId
-from .config import MONGODB_URI, MONGODB_DB
+from .config import MONGODB_URI, MONGODB_DB, FB_PAGE_NAME
 
 
 OID_KEY=u'_id'
@@ -117,14 +117,13 @@ class BasicEntry(ABC):
         if self.oid:
             self.update(op=UpdateOps.Supported.SET, **self.to_dict())
         else:
-            result = self.table.collection.insert_one(self.to_dict())
-            self.oid = result.inserted_id
+            self.oid = self.table.insert(self)
 
     def update_ex(self, ops):
         assert self.oid
         assert ops and isinstance(ops, UpdateOps)
         d = ops.update
-        r = self.table.collection.update_one({OID_KEY: self.oid}, d)
+        r = self.table.update(self, d)
         for op in ops.update:
             for k in d[op]:
                 assert k in self.db_fields
@@ -164,8 +163,18 @@ class BasicTable(ABC):
     client = MongoClient(MONGODB_URI)
     db = client[_adjust_mongodb_db_name(MONGODB_DB)]
 
+    @staticmethod
+    def __page_dict(d):
+        d['fbpage'] = FB_PAGE_NAME
+        return d
+
     def __init__(self, col_name):
         self.collection = self.db[col_name]
+
+    def insert(self, entry):
+        assert entry.oid is None
+        result = self.collection.insert_one(self.__page_dict(entry.to_dict()))
+        return result.inserted_id
 
     def read(self, oid):
         assert oid
@@ -174,13 +183,19 @@ class BasicTable(ABC):
     def delete(self, oid):
         self.collection.find_one_and_delete({OID_KEY: oid})
 
+    def update(self, entry, update):
+        return self.collection.update_one(
+            self.__page_dict({OID_KEY: entry.oid}),
+            update)
+
     def query(self, **kwargs):
-        return list(self.collection.find(kwargs))
+        return list(self.collection.find(self.__page_dict(kwargs)))
 
     def query_unique(self, **kwargs):
-        results = self.collection.find(kwargs)
+        results = self.collection.find(self.__page_dict(kwargs))
         if results.count() > 1:
-            raise ValueError("{}: ({!r}) must be unique".format(self.collection.name, kwargs))
+            raise ValueError("{}: {}: ({!r}) must be unique".format(
+                FB_PAGE_NAME, self.collection.name, kwargs))
         for r in results.limit(-1):
             return r
         return None
