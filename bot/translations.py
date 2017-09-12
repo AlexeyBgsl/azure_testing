@@ -49,7 +49,7 @@ DefaultStrings = dict(
     SID_GET_CHANNEL_NAME_PROMPT='Enter channel name',
     SID_GET_CHANNEL_DESC_PROMPT='Enter channel description',
     SID_GET_CHANNEL_PIC_PROMPT=(
-        'Add a picture that will serve as the channel\'s cover image or'
+        'Add a picture that will serve as the channel\'s cover image or '
         'press Done'),
     SID_CHANNEL_CREATED='Channel $CHANNEL_NAME ($CHANNEL_ID) is ready to use',
     SID_SELECT_CHANNEL_EDIT_ACTION_PROMPT=('What do you want to do with '
@@ -100,7 +100,7 @@ DefaultStrings = dict(
     SID_SHARE_SUB_BTN="Share",
     SID_VIEW_CHANNEL_BTN="View",
     SID_EDIT_CHANNEL_BTN="Edit",
-    SID_SHARE_CHANNEL_BTN="Share",
+    SID_SHARE_CHANNEL_BTN="Sharing Options",
     SID_MORE="More",
 
 )
