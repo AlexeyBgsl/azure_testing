@@ -61,7 +61,16 @@ class Payload(object):
         return s
 
 
-CTA = namedtuple('CTA', ['sid', 'action_id'])
+class CTA(object):
+    ACTION_TYPE_POSTBACK = 0
+    ACTION_TYPE_WEB = 1
+    ACTION_TYPE_SHARE = 2
+
+    def __init__(self, sid=None, action_id=None,
+                 action_type=ACTION_TYPE_POSTBACK):
+        self.sid = sid
+        self.action_id = action_id
+        self.action_type = action_type
 
 
 class CTAList(object):
@@ -84,6 +93,7 @@ class CTAList(object):
     def quick_replies(self):
         qreps = []
         for cta in self.ctas:
+            assert cta.action_type == CTA.ACTION_TYPE_POSTBACK
             p = Payload(type='ClbQRep',
                         state=self.sm.state,
                         action_id=cta.action_id,
@@ -99,23 +109,36 @@ class CTAList(object):
             qreps.append(QuickReply(title, str(p)))
         return qreps if qreps else None
 
-    @property
-    def buttons(self):
+    def get_buttons(self, channel=None, annc=None):
         buttons = []
+        c = channel if channel else self.sm.channel
+        a = annc if annc else self.sm.annc
         for cta in self.ctas:
-            p = Payload(type='ClbQRep',
-                        state=self.sm.state,
-                        action_id=cta.action_id,
-                        channel=self.sm.channel,
-                        annc = self.sm.annc)
-            if cta.sid.startswith('SID_'):
-               title = str(BotString(cta.sid,
-                                     user=self.sm.user,
-                                     channel=self.sm.channel,
-                                     annc=self.sm.annc))
+            if not cta.sid:
+                title = None
+            elif cta.sid.startswith('SID_'):
+                title = str(BotString(cta.sid,
+                                      user=self.sm.user,
+                                      channel=c,
+                                      annc=a))
             else:
                 title = cta.sid
-            buttons.append(Template.ButtonPostBack(title, str(p)))
+
+            if cta.action_type == CTA.ACTION_TYPE_POSTBACK:
+                p = Payload(type='ClbQRep',
+                            state=self.sm.state,
+                            action_id=cta.action_id,
+                            channel=c,
+                            annc = a)
+                buttons.append(Template.ButtonPostBack(title, str(p)))
+            elif cta.action_type == CTA.ACTION_TYPE_SHARE:
+                buttons.append(Template.ButtonShare())
+            elif cta.action_type == CTA.ACTION_TYPE_WEB:
+                buttons.append(Template.ButtonWeb(title, cta.action_id))
+            else:
+                raise ValueError("Unsupported action type: {}".format(
+                    cta.action_type))
+
         return buttons if buttons else None
 
 class BotRef(object):
@@ -251,7 +274,8 @@ class BotChat(BaseStateMachine):
         msg = str(BotString(msg_sid, user=self.user, channel=self.channel))
         if ctas:
             self.page.send(self.user.fbid,
-                           Template.Buttons(msg, CTAList(self, ctas).buttons),
+                           Template.Buttons(msg,
+                                            CTAList(self, ctas).get_buttons()),
                            quick_replies=qreps)
         else:
             self.page.send(self.user.fbid, msg, quick_replies=qreps)
@@ -263,16 +287,10 @@ class BotChat(BaseStateMachine):
             last = min(skip + self.FB_MAX_GENERIC_TEMPLATE_ELEMENTS, ccnt)
             elements = []
             for c in channels[skip:last]:
-                buttons = []
-                for cta in ctas:
-                    pstr = str(Payload(type='ClbQRep',
-                                       state=self.state,
-                                       action_id=cta.action_id,
-                                       channel=c))
-                    title = str(BotString(cta.sid, channel=c))
-                    buttons.append(Template.ButtonPostBack(title, pstr))
+                buttons = CTAList(self, ctas).get_buttons(channel=c)
+                subtitle = c.desc + '\n' + c.str_uchid
                 t = Template.GenericElement(c.name,
-                                            subtitle=c.desc + '\n' + c.str_uchid,
+                                            subtitle=subtitle,
                                             image_url=c.cover_pic,
                                             buttons=buttons)
                 elements.append(t)
@@ -310,83 +328,21 @@ class BotChat(BaseStateMachine):
         else:
             pass
 
-    def _state_init_select_share_channel_type(self, title_sid, ex_state):
-        title = str(BotString(title_sid, user=self.user, channel=self.channel))
-        buttons = [
-            Template.ButtonShare(),
-            Template.ButtonWeb(
-                str(BotString('SID_SHARE_CHANNEL_BY_LINK',
-                              user=self.user,
-                              channel=self.channel)),
-                m_link(BotRef(sub=self.channel.uchid).ref)),
-            Template.ButtonPostBack(
-                str(BotString('SID_MORE',
-                              user=self.user,
-                              channel=self.channel)),
-                str(Payload(type='ClbQRep',
-                            state=self.state,
-                            action_id=ex_state,
-                            channel=self.channel)))
+    def _state_init_select_share_channel_type(self):
+        ctas = [
+            CTA(action_type=CTA.ACTION_TYPE_SHARE),
+            CTA(sid='SID_SHARE_CHANNEL_BY_LINK',
+                action_id=m_link(BotRef(sub=self.channel.uchid).ref),
+                action_type=CTA.ACTION_TYPE_WEB),
+            CTA(sid='SID_SHARE_CHANNEL_BY_MSG_CODE',
+                action_id=self.channel.messenger_code,
+                action_type=CTA.ACTION_TYPE_WEB),
         ]
-        e = Template.GenericElement(title,
-                                    image_url=self.channel.cover_pic,
-                                    buttons=buttons)
-        self.page.send(self.user.fbid, Template.Generic([ e ]))
+        self._state_init_select_channel(channels=[self.channel, ],
+                                        ctas=ctas)
 
     def _state_handler_select_share_channel_type(self, event):
         self._state_handler_default(event=event)
-
-    def _state_init_select_share_channel_type_ex(self, title_sid):
-        title = str(BotString(title_sid, user=self.user, channel=self.channel))
-        buttons = [
-            Template.ButtonPostBack(
-                str(BotString('SID_SHARE_CHANNEL_BY_MSG_CODE',
-                              user=self.user,
-                              channel=self.channel)),
-                str(Payload(type='ClbQRep',
-                            state=self.state,
-                            action_id='ByMsgCode',
-                            channel=self.channel))),
-            Template.ButtonPostBack(
-                str(BotString('SID_SHARE_CHANNEL_BY_QR_CODE',
-                              user=self.user,
-                              channel=self.channel)),
-                str(Payload(type='ClbQRep',
-                            state=self.state,
-                            action_id='ByQRCode',
-                            channel=self.channel))),
-            Template.ButtonPostBack(
-                str(BotString('SID_SHARE_CHANNEL_BY_UCHID',
-                              user=self.user,
-                              channel=self.channel)),
-                str(Payload(type='ClbQRep',
-                            state=self.state,
-                            action_id='ByUChID',
-                            channel=self.channel)))
-        ]
-        e = Template.GenericElement(title,
-                                    image_url=self.channel.cover_pic,
-                                    buttons=buttons)
-        self.page.send(self.user.fbid, Template.Generic([ e ]))
-
-    def _state_handler_select_share_channel_type_ex(self, event,
-                                                    next_state='Root'):
-        if event.is_postback:
-            p = Payload.from_string(event.postback_payload)
-            if p.action_id == 'ByMsgCode':
-                self.page.send(self.user.fbid,
-                               Attachment.Image(self.channel.messenger_code))
-            elif p.action_id == 'ByQRCode':
-                self.page.send(self.user.fbid,
-                               Attachment.Image(self.channel.qr_code))
-            elif p.action_id == 'ByUChID':
-                self.page.send(self.user.fbid,
-                               str(BotString('SID_SHARE_BY_UCHID_TEXT',
-                                             user=self.user,
-                                             channel=self.channel)))
-            self.set_state(next_state)
-        else:
-            self._state_handler_default(event=event)
 
     @BaseStateMachine.state_initiator('Acquaintance')
     def state_init_acquaintance(self):
@@ -528,7 +484,7 @@ class BotChat(BaseStateMachine):
             CTA(sid='SID_EDIT_CHANNEL_BTN', action_id='SelectEditChannelType'),
             CTA(sid='SID_SHARE_CHANNEL_BTN', action_id='SelectShareChannelType'),
         ]
-        self._state_init_select_channel(channels=[self.channel,], ctas=ctas)
+        self._state_init_select_channel(channels=[self.channel, ], ctas=ctas)
 
     @BaseStateMachine.state_handler('ChannelCreated')
     def state_handler_channel_created(self, event):
@@ -563,22 +519,12 @@ class BotChat(BaseStateMachine):
 
     @BaseStateMachine.state_initiator('SelectShareChannelType')
     def state_init_select_share_channel_type(self):
-        self._state_init_select_share_channel_type(
-            title_sid='SID_SELECT_CHANNEL_SHARE_ACTION_PROMPT',
-            ex_state='SelectShareChannelTypeEx')
+        self.send_simple('SID_SELECT_CHANNEL_SHARE_ACTION_PROMPT')
+        self._state_init_select_share_channel_type()
 
     @BaseStateMachine.state_handler('SelectShareChannelType')
     def state_handler_select_share_channel_type(self, event):
         self._state_handler_select_share_channel_type(event=event)
-
-    @BaseStateMachine.state_initiator('SelectShareChannelTypeEx')
-    def state_init_select_share_channel_type_ex(self):
-        self._state_init_select_share_channel_type_ex(
-            title_sid='SID_SELECT_CHANNEL_SHARE_ACTION_PROMPT')
-
-    @BaseStateMachine.state_handler('SelectShareChannelTypeEx')
-    def state_handler_select_share_channel_type_ex(self, event):
-        self._state_handler_select_share_channel_type_ex(event)
 
     @BaseStateMachine.state_initiator('EditChannelName')
     def state_init_edit_channel_name(self):
@@ -643,21 +589,11 @@ class BotChat(BaseStateMachine):
     @BaseStateMachine.state_initiator('SelectShareSubType')
     def state_init_select_share_sub_type(self):
         self._state_init_select_share_channel_type(
-            title_sid='SID_SELECT_CHANNEL_SHARE_ACTION_PROMPT',
-            ex_state='SelectShareSubTypeEx')
+            title_sid='SID_SELECT_CHANNEL_SHARE_ACTION_PROMPT')
 
     @BaseStateMachine.state_handler('SelectShareSubType')
     def state_handler_select_share_sub_type(self, event):
         self._state_handler_select_share_channel_type(event=event)
-
-    @BaseStateMachine.state_initiator('SelectShareSubTypeEx')
-    def state_init_select_share_channel_type_ex(self):
-        self._state_init_select_share_channel_type_ex(
-            title_sid='SID_SELECT_CHANNEL_SHARE_ACTION_PROMPT')
-
-    @BaseStateMachine.state_handler('SelectShareSubTypeEx')
-    def state_handler_select_share_channel_type_ex(self, event):
-        self._state_handler_select_share_channel_type_ex(event)
 
     @BaseStateMachine.state_initiator('AddSub')
     def state_init_add_sub(self):
