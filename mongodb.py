@@ -119,6 +119,11 @@ class BasicEntry(ABC):
         else:
             self.oid = self.table.insert(self)
 
+    def save_unique(self, **kwargs):
+        assert self.oid is None
+        assert kwargs
+        self.oid = self.table.insert_or_update(kwargs, self)
+
     def update_ex(self, ops):
         assert self.oid
         assert ops and isinstance(ops, UpdateOps)
@@ -170,6 +175,15 @@ class BasicTable(ABC):
 
     def __init__(self, col_name):
         self.collection = self.db[col_name]
+
+    def insert_or_update(self, filter, entry):
+        assert entry.oid is None
+        u = UpdateOps(op=UpdateOps.Supported.SET,
+                      **self.__page_dict(entry.to_dict()))
+        result = self.collection.update_one(self.__page_dict(filter),
+                                            u.update,
+                                            upsert=True)
+        return result.upsertedId
 
     def insert(self, entry):
         assert entry.oid is None
