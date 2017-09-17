@@ -75,7 +75,7 @@ class BotPage(fbmq.Page):
         user = User.find_unique(fbid=fbid)
         if user is None:
             user = self._user_from_fb_profile(fbid)
-            user.save()
+            user.save_unique(fbid=fbid)
         return user
 
     @dump_member_func
