@@ -664,7 +664,8 @@ class BotChat(BaseStateMachine):
 
     @BaseStateMachine.state_initiator('AddSub')
     def state_init_add_sub(self):
-        self.send_simple('SID_ENTER_CHANNEL_ID_PROMPT')
+        self.send_simple('SID_ENTER_CHANNEL_ID_PROMPT',
+                         std_quick_replies=False)
 
     @BaseStateMachine.state_handler('AddSub')
     def state_handler_add_sub(self, event):
@@ -719,7 +720,7 @@ class BotChat(BaseStateMachine):
 
     @BaseStateMachine.state_initiator('MakeAnnc')
     def state_init_make_annc(self):
-        self.send_simple('SID_ANNC_GET_TITLE_PROMPT')
+        self.send_simple('SID_ANNC_GET_TITLE_PROMPT', std_quick_replies=False)
 
     @BaseStateMachine.state_handler('MakeAnnc')
     def state_handler_make_annc(self, event):
@@ -736,7 +737,7 @@ class BotChat(BaseStateMachine):
 
     @BaseStateMachine.state_initiator('SetAnncText')
     def state_init_set_annc_text(self):
-        self.send_simple('SID_ANNC_GET_TEXT_PROMPT')
+        self.send_simple('SID_ANNC_GET_TEXT_PROMPT', std_quick_replies=False)
 
     @BaseStateMachine.state_handler('SetAnncText')
     def state_handler_set_annc_text(self, event):
