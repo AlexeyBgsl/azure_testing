@@ -280,6 +280,40 @@ class BotChat(BaseStateMachine):
         else:
             self.page.send(self.user.fbid, msg, quick_replies=qreps)
 
+    def _state_init_show_anncs(self):
+        assert self.channel
+        anncs = Annc.find(chid=self.channel.oid)
+        acnt = len(anncs)
+        skip = 0
+        if hasattr(self, 'anncs_to_skip'):
+            skip = getattr(self, 'anncs_to_skip')
+            delattr(self, 'anncs_to_skip')
+        last = min(skip + 5, acnt)
+        if acnt > skip:
+            for a in anncs[skip:last]:
+                Horn(self.page).notify_one(user=self.user,
+                                           annc=a,
+                                           channel=self.channel)
+        if acnt <= skip or last == acnt:
+            self.send_simple('SID_NO_MORE_ANNCS')
+            self.set_state('Root')
+        else:
+            ctas = [
+                CTA(sid='SID_YES', action_id=str(last)),
+                CTA(sid='SID_NO', action_id='-1')
+            ]
+            self.send_simple('SID_SHOW_EARIER_ANNCS_PROMPT', ctas=ctas)
+
+    def _state_handle_show_anncs(self, event):
+        if event.is_postback:
+            p = Payload.from_string(event.postback_payload)
+            if p.action_id == '-1':
+                self.set_state('Root')
+            else:
+                setattr(self, 'anncs_to_skip', int(p.action_id))
+        else:
+            self._state_handler_default(event=event)
+
     def _state_init_select_channel(self, channels, ctas):
         ccnt = len(channels)
         skip = 0
@@ -519,7 +553,7 @@ class BotChat(BaseStateMachine):
     def state_init_browse_channels(self):
         channels = Channel.find(owner_uid=self.user.oid)
         ctas = [
-            CTA(sid='SID_VIEW_CHANNEL_BTN', action_id='NotImplemented'),
+            CTA(sid='SID_VIEW_CHANNEL_BTN', action_id='ViewChannel'),
             CTA(sid='SID_EDIT_CHANNEL_BTN', action_id='SelectEditChannelType'),
             CTA(sid='SID_SHARE_CHANNEL_BTN', action_id='SelectShareChannelType'),
         ]
@@ -528,6 +562,14 @@ class BotChat(BaseStateMachine):
     @BaseStateMachine.state_handler('BrowseChannels')
     def state_handler_browse_channels(self, event):
         self._state_handler_default(event=event)
+
+    @BaseStateMachine.state_initiator('ViewChannel')
+    def state_init_view_channel(self):
+        self._state_init_show_anncs()
+
+    @BaseStateMachine.state_handler('ViewChannel')
+    def state_handler_view_channel(self, event):
+        self._state_handle_show_anncs(event=event)
 
     @BaseStateMachine.state_initiator('SelectEditChannelType')
     def state_init_select_edit_channel_type(self):

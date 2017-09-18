@@ -109,7 +109,9 @@ DefaultStrings = dict(
     SID_EDIT_CHANNEL_BTN="Edit",
     SID_SHARE_CHANNEL_BTN="Sharing Options",
     SID_MORE="More",
-
+    SID_NO_MORE_ANNCS='There is nothing else in this channel.',
+    SID_SHOW_EARIER_ANNCS_PROMPT=('Do you want to see earlier announcements '
+                                  'made on this channel?')
 )
 
 
