@@ -478,16 +478,41 @@ class BotChat(BaseStateMachine):
     @BaseStateMachine.state_initiator('ChannelCreated')
     def state_init_channel_created(self):
         assert self.channel
-        self.send_simple('SID_CHANNEL_CREATED')
         ctas = [
-            CTA(sid='SID_VIEW_CHANNEL_BTN', action_id='NotImplemented'),
-            CTA(sid='SID_EDIT_CHANNEL_BTN', action_id='SelectEditChannelType'),
-            CTA(sid='SID_SHARE_CHANNEL_BTN', action_id='SelectShareChannelType'),
+            CTA(sid='SID_ADD', action_id='SetChannelPic'),
+            CTA(sid='SID_DONE', action_id='PostChannelCreated'),
         ]
-        self._state_init_select_channel(channels=[self.channel, ], ctas=ctas)
+        self.send_simple('SID_CHANNEL_CREATED', ctas=ctas)
 
     @BaseStateMachine.state_handler('ChannelCreated')
     def state_handler_channel_created(self, event):
+        self._state_handler_default(event=event)
+
+    @BaseStateMachine.state_initiator('SetChannelPic')
+    def state_init_set_channel_pic(self):
+        assert self.channel
+        self.send_simple('SID_GET_CHANNEL_PIC_PROMPT')
+
+    @BaseStateMachine.state_handler('SetChannelPic')
+    def state_handler_set_channel_pic(self, event):
+        if event.is_attachment_message:
+            for a in event.message_attachments:
+                if a['type'] == 'image':
+                    self.channel.set_cover_pic(a['payload']['url'])
+                    self.set_state('PostChannelCreated')
+                    return
+        self._state_handler_default(event=event)
+
+    @BaseStateMachine.state_initiator('PostChannelCreated')
+    def state_init_post_channel_created(self):
+        assert self.channel
+        ctas = [
+            CTA(sid='SID_MAKE_ANNOUNCEMENT', action_id='MakeAnnc'),
+        ]
+        self.send_simple('SID_POST_CHANNEL_CREATED_PROMPT', ctas=ctas)
+
+    @BaseStateMachine.state_handler('PostChannelCreated')
+    def state_handler_post_channel_created(self, event):
         self._state_handler_default(event=event)
 
     @BaseStateMachine.state_initiator('BrowseChannels')

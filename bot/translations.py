@@ -30,6 +30,7 @@ DefaultStrings = dict(
     SID_HOW_TO='How To',
     SID_FEEDBACK='Feedback',
     SID_DONE='Done',
+    SID_ADD='Add',
     SID_MY_CHANNELS='Channels',
     SID_SUBSCRIBE='Subscribe',
     SID_UNSUBSCRIBE='Unsubscribe',
@@ -48,7 +49,14 @@ DefaultStrings = dict(
                               'Announcements arrive to all the Channel Subscribers'),
     SID_GET_CHANNEL_NAME_PROMPT='Enter channel name',
     SID_GET_CHANNEL_DESC_PROMPT='Enter channel description',
-    SID_CHANNEL_CREATED='Channel $CHANNEL_NAME ($CHANNEL_ID) is ready to use',
+    SID_GET_CHANNEL_PIC_PROMPT=('Send a picture that will serve as the '
+                                'channel\'s cover image to us\n\n'
+                                'For assistance: http://tinyurl.com/yc2r5q43'),
+    SID_CHANNEL_CREATED=('Add a picture that will serve as the channel\'s '
+                         'cover image or press Done'),
+    SID_POST_CHANNEL_CREATED_PROMPT=('Your channel $CHANNEL_NAME is created, '
+                                     'now it is the best time to make first '
+                                     'announcement:'),
     SID_SELECT_CHANNEL_EDIT_ACTION_PROMPT=('What do you want to do with '
                                            'channel $CHANNEL_NAME?'),
     SID_EDIT_CHANNEL_NAME='Change Name',
