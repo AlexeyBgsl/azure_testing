@@ -576,7 +576,7 @@ class BotChat(BaseStateMachine):
         ctas = [
             CTA(sid='SID_EDIT_CHANNEL_NAME', action_id='EditChannelName'),
             CTA(sid='SID_EDIT_CHANNEL_DESC', action_id='EditChannelDesc'),
-            CTA(sid='SID_EDIT_CHANNEL_DELETE', action_id='DeleteChannel')
+            CTA(sid='SID_EDIT_CHANNEL_PIC', action_id='SetChannelPic')
         ]
         self.send_simple('SID_SELECT_CHANNEL_EDIT_ACTION_PROMPT', ctas=ctas)
 

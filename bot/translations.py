@@ -57,11 +57,11 @@ DefaultStrings = dict(
     SID_POST_CHANNEL_CREATED_PROMPT=('Your channel $CHANNEL_NAME is created, '
                                      'now it is the best time to make first '
                                      'announcement:'),
-    SID_SELECT_CHANNEL_EDIT_ACTION_PROMPT=('What do you want to do with '
-                                           'channel $CHANNEL_NAME?'),
+    SID_SELECT_CHANNEL_EDIT_ACTION_PROMPT=('Change name, description or cover '
+                                           'image of $CHANNEL_NAME?'),
     SID_EDIT_CHANNEL_NAME='Change Name',
     SID_EDIT_CHANNEL_DESC='Change Description',
-    SID_EDIT_CHANNEL_DELETE='Delete Channel',
+    SID_EDIT_CHANNEL_PIC='Choose Cover Image',
     SID_SHARE_CHANNEL_BY_MSG_CODE='Share by Messenger Code',
     SID_SHARE_CHANNEL_BY_LINK='Share by Link',
     SID_SELECT_CHANNEL_SHARE_ACTION_PROMPT=(
