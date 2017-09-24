@@ -57,21 +57,25 @@ DefaultStrings = dict(
     SID_POST_CHANNEL_CREATED_PROMPT=('Your channel $CHANNEL_NAME is created, '
                                      'now it is the best time to make first '
                                      'announcement:'),
-    SID_SELECT_CHANNEL_EDIT_ACTION_PROMPT=('Change name, description or cover '
-                                           'image of $CHANNEL_NAME?'),
-    SID_EDIT_CHANNEL_NAME='Change Name',
-    SID_EDIT_CHANNEL_DESC='Change Description',
-    SID_EDIT_CHANNEL_PIC='Choose Cover Image',
+    SID_SELECT_CHANNEL_EDIT_ACTION_PROMPT=(
+        'Change name, description or cover image of $CHANNEL_NAME. Please '
+        'note, you can skip some steps:'),
+    SID_EDIT_CHANNEL_PIC='Add a New Image',
+    SID_DELETE_CHANNEL='Delete Channel',
     SID_SELECT_CHANNEL_SHARE_ACTION_PROMPT=(
         'Choose your preferred method of sharing the channel. Also you can '
         'copy following URL  to be shared outside the Messenger to folks be '
         'able to subscribe your channel anywhere.'
     ),
     SID_CHANNEL_INFO='Channel Info',
-    SID_EDIT_CHANNEL_NAME_PROMPT='Please enter new Channel Name',
-    SID_CHANNEL_NAME_CHANGED='Channel $CHANNEL_ID name changed successfully',
-    SID_EDIT_CHANNEL_DESC_PROMPT='Please enter new Channel Description',
-    SID_CHANNEL_DESC_CHANGED='Channel $CHANNEL_NAME description changed successfully',
+    SID_EDIT_CHANNEL_INFO='Name and Description',
+    SID_EDIT_CHANNEL_INFO_PROMPT=(
+        'Enter a new name. Type @ if you don\'t want to change it and need to '
+        'change the description only.'
+    ),
+    SID_EDIT_CHANNEL_DESC_PROMPT=(
+        'Enter a new description. Type @ if you don\'t want to change it.'
+    ),
     SID_DEL_CHANNEL_PROMPT='Are you sure?',
     SID_CHANNEL_REMOVED="Channel successfully removed",
     SID_CHANNEL_UNCHANGED="Channel remains unchanged",

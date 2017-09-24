@@ -341,11 +341,12 @@ class BotChat(BaseStateMachine):
             return p.action_id
         return None
 
-    def _state_handler_edit_channel_field(self, fname, event):
+    def _state_handler_edit_channel_field(self, fname, event, skip_val=None):
         if not event.is_text_message:
             return False
         val = event.message_text.strip()
-        self.channel.update(op=UpdateOps.Supported.SET,**{fname: val})
+        if not skip_val or skip_val != val:
+            self.channel.update(op=UpdateOps.Supported.SET,**{fname: val})
         return True
 
     def _state_handler_default(self, event):
@@ -527,7 +528,8 @@ class BotChat(BaseStateMachine):
     @BaseStateMachine.state_initiator('SetChannelPic')
     def state_init_set_channel_pic(self):
         assert self.channel
-        self.send_simple('SID_GET_CHANNEL_PIC_PROMPT')
+        self.send_simple('SID_GET_CHANNEL_PIC_PROMPT',
+                         std_quick_replies=False)
 
     @BaseStateMachine.state_handler('SetChannelPic')
     def state_handler_set_channel_pic(self, event):
@@ -576,15 +578,29 @@ class BotChat(BaseStateMachine):
     @BaseStateMachine.state_initiator('SelectEditChannelType')
     def state_init_select_edit_channel_type(self):
         ctas = [
-            CTA(sid='SID_EDIT_CHANNEL_NAME', action_id='EditChannelName'),
-            CTA(sid='SID_EDIT_CHANNEL_DESC', action_id='EditChannelDesc'),
-            CTA(sid='SID_EDIT_CHANNEL_PIC', action_id='SetChannelPic')
+            CTA(sid='SID_EDIT_CHANNEL_INFO', action_id='EditChannelInfo'),
+            CTA(sid='SID_EDIT_CHANNEL_PIC', action_id='EditChannelPic'),
+            CTA(sid='SID_DELETE_CHANNEL', action_id='DeleteChannel'),
         ]
         self.send_simple('SID_SELECT_CHANNEL_EDIT_ACTION_PROMPT', ctas=ctas)
 
     @BaseStateMachine.state_handler('SelectEditChannelType')
     def state_handler_select_edit_channel_type(self, event):
         self._state_handler_default(event=event)
+
+    @BaseStateMachine.state_initiator('EditChannelInfo')
+    def state_init_edit_channel_info(self):
+        self.send_simple('SID_EDIT_CHANNEL_INFO_PROMPT',
+                         std_quick_replies=False)
+
+    @BaseStateMachine.state_handler('EditChannelInfo')
+    def state_handler_edit_channel_info(self, event):
+        if self._state_handler_edit_channel_field(fname='name',
+                                                  event=event,
+                                                  skip_val='@'):
+            self.set_state('EditChannelDesc')
+        else:
+            self._state_handler_default(event=event)
 
     @BaseStateMachine.state_initiator('SelectShareChannelType')
     def state_init_select_share_channel_type(self):
@@ -597,29 +613,35 @@ class BotChat(BaseStateMachine):
     def state_handler_select_share_channel_type(self, event):
         self._state_handler_select_share_channel_type(event=event)
 
-    @BaseStateMachine.state_initiator('EditChannelName')
-    def state_init_edit_channel_name(self):
-        self.send_simple('SID_EDIT_CHANNEL_NAME_PROMPT')
-
-    @BaseStateMachine.state_handler('EditChannelName')
-    def state_handler_edit_channel_name(self, event):
-        if self._state_handler_edit_channel_field(fname='name', event=event):
-            self.send_simple('SID_CHANNEL_NAME_CHANGED')
-            self.set_state('Root')
-        else:
-            self._state_handler_default(event=event)
-
     @BaseStateMachine.state_initiator('EditChannelDesc')
     def state_init_edit_channel_name(self):
-        self.send_simple('SID_EDIT_CHANNEL_DESC_PROMPT')
+        self.send_simple('SID_EDIT_CHANNEL_DESC_PROMPT',
+                         std_quick_replies=False)
 
     @BaseStateMachine.state_handler('EditChannelDesc')
     def state_handler_edit_channel_name(self, event):
-        if self._state_handler_edit_channel_field(fname='desc', event=event):
-            self.send_simple('SID_CHANNEL_DESC_CHANGED')
+        if self._state_handler_edit_channel_field(fname='desc',
+                                                  event=event,
+                                                  skip_val='@'):
             self.set_state('Root')
         else:
             self._state_handler_default(event=event)
+
+    @BaseStateMachine.state_initiator('EditChannelPic')
+    def state_init_edit_channel_pic(self):
+        assert self.channel
+        self.send_simple('SID_GET_CHANNEL_PIC_PROMPT',
+                         std_quick_replies=False)
+
+    @BaseStateMachine.state_handler('EditChannelPic')
+    def state_handler_edit_channel_pic(self, event):
+        if event.is_attachment_message:
+            for a in event.message_attachments:
+                if a['type'] == 'image':
+                    self.channel.set_cover_pic(a['payload']['url'])
+                    self.set_state('Root')
+                    return
+        self._state_handler_default(event=event)
 
     @BaseStateMachine.state_initiator('DeleteChannel')
     def state_init_delete_channel(self):
