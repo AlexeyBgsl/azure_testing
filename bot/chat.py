@@ -4,6 +4,7 @@ from fbmq import QuickReply, Template, Attachment
 from bot.translations import BotString
 from db import Channel, Annc, UpdateOps, Feedback, m_link
 from bot.horn import Horn
+from bot.config import CONFIG
 
 
 BotChatClbTypes = dict(
@@ -329,7 +330,8 @@ class BotChat(BaseStateMachine):
                                             buttons=buttons)
                 elements.append(t)
             skip = last
-            self.page.send(self.user.fbid, Template.Generic(elements),
+            self.page.send(self.user.fbid, Template.Generic(elements,
+                                                            square_image=True),
                            quick_replies=self.std_qreps)
 
     def _state_handle_select_channel(self, event):
@@ -365,11 +367,11 @@ class BotChat(BaseStateMachine):
     def _state_init_select_share_channel_type(self):
         ctas = [
             CTA(action_type=CTA.ACTION_TYPE_SHARE),
-            CTA(sid='SID_SHARE_CHANNEL_BY_LINK',
-                action_id=m_link(BotRef(sub=self.channel.uchid).ref),
+            CTA(sid='SID_CHANNEL_INFO',
+                action_id=CONFIG['CHANNELS_INFO_URI'] + self.channel.uchid,
                 action_type=CTA.ACTION_TYPE_WEB),
-            CTA(sid='SID_SHARE_CHANNEL_BY_MSG_CODE',
-                action_id=self.channel.messenger_code,
+            CTA(sid='SID_ADD_SUBSCRIPTION',
+                action_id=m_link(BotRef(sub=self.channel.uchid).ref),
                 action_type=CTA.ACTION_TYPE_WEB),
         ]
         self._state_init_select_channel(channels=[self.channel, ],
@@ -587,6 +589,8 @@ class BotChat(BaseStateMachine):
     @BaseStateMachine.state_initiator('SelectShareChannelType')
     def state_init_select_share_channel_type(self):
         self.send_simple('SID_SELECT_CHANNEL_SHARE_ACTION_PROMPT')
+        self.page.send(self.user.fbid,
+                       m_link(BotRef(sub=self.channel.uchid).ref))
         self._state_init_select_share_channel_type()
 
     @BaseStateMachine.state_handler('SelectShareChannelType')

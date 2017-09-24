@@ -12,12 +12,17 @@ ACCESS_TOKEN_DBG = ('EAATBF61P4qoBAOxtLJqx75i2e04c2CUCpfTCiOTaJCuZA81ZAVf33icr'
                     'xfElOXm50aBTlcTGtFnuyr5lZAPrV382eGCVZB58pb4AoSohRmyyV5qyw'
                     'XOsDBpM8HgE3ZCfN9rv7spE9ZCfqIDnj2tM9Tb5ZAm9fb3l296ZAJQgIn'
                     'QlO2ltaF4uAwqQ')
+
+CHANNELS_INFO_URI = os.getenv('CHANNELS_BASE_URI',
+                              'http://locanobot.azurewebsites.net/channels/')
+assert CHANNELS_INFO_URI
+
 CONFIG = dict(
     ACCESS_TOKEN='',
     VERIFY_TOKEN='loc@no',
-    PROJECT_ID='locano-172715'
+    PROJECT_ID='locano-172715',
+    CHANNELS_INFO_URI=CHANNELS_INFO_URI
 )
-
 
 def init_config():
     if os.getenv('PRODUCTION_APP_ENV', '') == '1':

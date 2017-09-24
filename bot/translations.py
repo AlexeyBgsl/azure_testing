@@ -62,15 +62,12 @@ DefaultStrings = dict(
     SID_EDIT_CHANNEL_NAME='Change Name',
     SID_EDIT_CHANNEL_DESC='Change Description',
     SID_EDIT_CHANNEL_PIC='Choose Cover Image',
-    SID_SHARE_CHANNEL_BY_MSG_CODE='Share by Messenger Code',
-    SID_SHARE_CHANNEL_BY_LINK='Share by Link',
     SID_SELECT_CHANNEL_SHARE_ACTION_PROMPT=(
-        'Choose your preferred method of sharing the channel. "Share" means '
-        'sharing to another Messenger user. Clicking "Share by Link" — shows '
-        'you a channel URL you can send to someone to s/he will subscribe. '
-        '"Subscribe by Messenger Code” ability shows a round code to be '
-        'scanned with appropriate function of the Messenger, so you can give '
-        'a nearby friend to subscribe the channel now.'),
+        'Choose your preferred method of sharing the channel. Also you can '
+        'copy following URL  to be shared outside the Messenger to folks be '
+        'able to subscribe your channel anywhere.'
+    ),
+    SID_CHANNEL_INFO='Channel Info',
     SID_EDIT_CHANNEL_NAME_PROMPT='Please enter new Channel Name',
     SID_CHANNEL_NAME_CHANGED='Channel $CHANNEL_ID name changed successfully',
     SID_EDIT_CHANNEL_DESC_PROMPT='Please enter new Channel Description',
