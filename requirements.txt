@@ -5,3 +5,4 @@ pymongo
 azure-storage
 pyqrcode
 pypng
+requests

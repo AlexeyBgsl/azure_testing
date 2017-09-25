@@ -1,7 +1,8 @@
 import logging
-from flask import Flask
+from flask import Flask, Blueprint
 from logging.handlers import RotatingFileHandler
 from bot import create_bot
+from ga_events import create_ga_tracker
 from web import create_webaux
 import config
 
@@ -28,6 +29,7 @@ def create_app(config):
 
     create_bot(app)
     create_webaux(app)
+    create_ga_tracker(app)
 
     # Add a default root route.
     @app.route("/")

@@ -1,5 +1,6 @@
 # Copyright 2017 Locano. All Rights Reserved.
 import requests
+
 class EventTracker:
     def __init__(self):
         pass
