@@ -1,7 +1,7 @@
 import logging
 from fbmq import QuickReply, Template, Attachment
 from bot.translations import BotString
-from db import Channel, Annc, UpdateOps, Feedback, m_link
+from db import Channel, Annc, UpdateOps, m_link
 from bot.horn import Horn
 from bot.config import CONFIG
 from bot.mail import GMailer
