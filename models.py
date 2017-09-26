@@ -248,22 +248,3 @@ class String(BasicEntry):
             if locale:
                 l.append(locale)
         return l
-
-
-class Feedbacks(BasicTable):
-    def __init__(self):
-        super().__init__(col_name="Feedbacks")
-
-
-class Feedback(BasicEntry):
-    table = Feedbacks()
-    INIT_FIELDS = [
-        EntryField('owner_uid', None),
-        EntryField('text', ''),
-        EntryField('created', '')
-    ]
-
-    def __init__(self, owner_uid=None, text=None, entity=None):
-        super().__init__(owner_uid=owner_uid, text=text, entity=entity)
-        if not entity:
-            self.created = datetime.datetime.utcnow()
