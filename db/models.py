@@ -185,12 +185,15 @@ class Annc(BasicEntry):
         EntryField('title', None),
         EntryField('chid', None),
         EntryField('owner_uid', None),
-        EntryField('text', '')
+        EntryField('text', ''),
+        EntryField('created', '')
     ]
 
     def __init__(self, title=None, chid=None, owner_uid=None, entity=None):
         super().__init__(title=title, chid=chid, owner_uid=owner_uid,
                          entity=entity)
+        if not entity:
+            self.created = datetime.datetime.utcnow()
 
 
 class Strings(BasicTable):
