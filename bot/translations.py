@@ -82,7 +82,12 @@ DefaultStrings = dict(
     SID_LIST_SUBSCRIPTIONS="List Subscriptions",
     SID_ADD_SUBSCRIPTION="Subscribe",
     SID_DEL_SUBSCRIPTION="Unsubscribe",
-    SID_SUBSCRIPTIONS_PROMPT='What do you want to do next?',
+    SID_1ST_SUBSCRIPTION_PROMPT='Subscribe to a channel is good idea',
+    SID_SUBSCRIPTIONS_PROMPT='Here are your subscriptions:',
+    SID_SUBSCRIPTION_ADD_PROMPT=(
+        "You can subscribe yet another channel. Enter desired Channel ID "
+        "or channel URL."
+    ),
     SID_SUB_ADDED="Subscription to channel $CHANNEL_NAME added",
     SID_SUB_EXISTS="You are already subscribed to channel $CHANNEL_NAME",
     SID_ENTER_CHANNEL_ID_PROMPT="Enter desired Channel ID",
@@ -105,7 +110,7 @@ DefaultStrings = dict(
     SID_SELECT_THIS="Select",
     SID_VIEW_SUB_BTN="View",
     SID_DEL_SUB_BTN="Unsubscribe",
-    SID_SHARE_SUB_BTN="Share",
+    SID_SHARE_SUB_BTN="Share Channel",
     SID_VIEW_CHANNEL_BTN="View",
     SID_EDIT_CHANNEL_BTN="Edit",
     SID_SHARE_CHANNEL_BTN="Sharing Options",

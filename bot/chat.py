@@ -268,11 +268,14 @@ class BotChat(BaseStateMachine):
                     channel=self.channel, annc=self.annc)
         self.user.update(UpdateOps.Supported.SET, state_payload=str(p))
 
-    def send_simple(self, msg_sid, ctas = None, std_quick_replies=True):
+    def send_simple(self, msg_sid, ctas = None, std_quick_replies=True,
+                    channel=None):
         qreps = None
         if std_quick_replies:
             qreps = self.std_qreps
-        msg = str(BotString(msg_sid, user=self.user, channel=self.channel))
+        msg = str(BotString(msg_sid,
+                            user=self.user,
+                            channel=channel if channel else self.channel))
         if ctas:
             self.page.send(self.user.fbid,
                            Template.Buttons(msg,
@@ -351,6 +354,23 @@ class BotChat(BaseStateMachine):
             return True
         self.channel.update(op=UpdateOps.Supported.SET,**{fname: val})
         return True
+
+    def _state_handler_add_sub(self, event):
+        if event.is_text_message:
+            logging.debug("[U#%s] Desired uchid is: %s",
+                          event.sender_id, event.message_text)
+            channel = Channel.by_uchid_str(event.message_text)
+            if channel:
+                if self.user.oid in channel.subs:
+                    self.send_simple('SID_SUB_EXISTS', channel=channel)
+                else:
+                    channel.subscribe(self.user.oid)
+                    if self.user.oid in channel.subs:
+                        self.send_simple('SID_SUB_ADDED', channel=channel)
+                        return True
+                    else:
+                        self.send_simple('SID_ERROR', channel=channel)
+        return False
 
     def _state_handler_default(self, event):
         if event.is_quick_reply:
@@ -462,15 +482,28 @@ class BotChat(BaseStateMachine):
     @BaseStateMachine.state_initiator('MySubscriptions')
     def state_init_my_subscriptions(self):
         subs = Channel.all_subscribed(self.user.oid)
-        ctas = [CTA(sid='SID_ADD_SUBSCRIPTION', action_id='AddSub')]
-        if len(subs):
-            ctas.append(CTA(sid='SID_LIST_SUBSCRIPTIONS',
-                            action_id='ListSubs'))
-        self.send_simple('SID_SUBSCRIPTIONS_PROMPT', ctas=ctas)
+        if not len(subs):
+            ctas = [CTA(sid='SID_ADD_SUBSCRIPTION', action_id='AddSub')]
+            self.send_simple('SID_1ST_SUBSCRIPTION_PROMPT', ctas=ctas)
+        else:
+            self.send_simple('SID_SUBSCRIPTIONS_PROMPT',
+                             std_quick_replies=False)
+            channels = Channel.all_subscribed(uid=self.user.oid)
+            ctas = [
+                CTA(sid='SID_VIEW_SUB_BTN', action_id='ViewChannel'),
+                CTA(sid='SID_DEL_SUB_BTN', action_id='DelSub'),
+                CTA(sid='SID_SHARE_SUB_BTN', action_id='SelectShareChannelType'),
+            ]
+            self._state_init_select_channel(channels=channels, ctas=ctas)
+            self.send_simple('SID_SUBSCRIPTION_ADD_PROMPT',
+                             std_quick_replies=False)
 
     @BaseStateMachine.state_handler('MySubscriptions')
     def state_handler_my_subscriptions(self, event):
-        self._state_handler_default(event=event)
+        if self._state_handler_add_sub(event=event):
+            self.set_state('Root')
+        else:
+            self._state_handler_default(event=event)
 
     @BaseStateMachine.state_initiator('MakeAnnouncement')
     def state_init_make_annc(self):
@@ -676,29 +709,6 @@ class BotChat(BaseStateMachine):
         else:
              self._state_handler_default(event=event)
 
-    @BaseStateMachine.state_initiator('ListSubs')
-    def state_init_list_subs(self):
-        channels = Channel.all_subscribed(uid=self.user.oid)
-        ctas = [
-            CTA(sid='SID_VIEW_SUB_BTN', action_id='NotImplemented'),
-            CTA(sid='SID_DEL_SUB_BTN', action_id='DelSub'),
-            CTA(sid='SID_SHARE_SUB_BTN', action_id='SelectShareSubType'),
-        ]
-        self._state_init_select_channel(channels=channels, ctas=ctas)
-
-    @BaseStateMachine.state_handler('ListSubs')
-    def state_handler_list_subs(self, event):
-        self._state_handler_default(event=event)
-
-    @BaseStateMachine.state_initiator('SelectShareSubType')
-    def state_init_select_share_sub_type(self):
-        self._state_init_select_share_channel_type(
-            title_sid='SID_SELECT_CHANNEL_SHARE_ACTION_PROMPT')
-
-    @BaseStateMachine.state_handler('SelectShareSubType')
-    def state_handler_select_share_sub_type(self, event):
-        self._state_handler_select_share_channel_type(event=event)
-
     @BaseStateMachine.state_initiator('AddSub')
     def state_init_add_sub(self):
         self.send_simple('SID_ENTER_CHANNEL_ID_PROMPT',
@@ -706,20 +716,10 @@ class BotChat(BaseStateMachine):
 
     @BaseStateMachine.state_handler('AddSub')
     def state_handler_add_sub(self, event):
-        if event.is_text_message:
-            logging.debug("[U#%s] Desired uchid is: %s",
-                          event.sender_id, event.message_text)
-            self.channel = Channel.by_uchid_str(event.message_text)
-            if self.channel:
-                if self.user.oid in self.channel.subs:
-                    self.send_simple('SID_SUB_EXISTS')
-                else:
-                    self.channel.subscribe(self.user.oid)
-                    if self.user.oid in self.channel.subs:
-                        self.send_simple('SID_SUB_ADDED')
-                        self.set_state('Root')
-                    else:
-                        self.send_simple('SID_ERROR')
+        if self._state_handler_add_sub(self.event):
+            self.set_state('Root')
+        else:
+            self._state_handler_default(event=event)
 
     @BaseStateMachine.state_initiator('DelSub')
     def state_init_del_sub(self):
