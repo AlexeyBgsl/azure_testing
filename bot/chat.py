@@ -345,8 +345,11 @@ class BotChat(BaseStateMachine):
         if not event.is_text_message:
             return False
         val = event.message_text.strip()
-        if not skip_val or skip_val != val:
-            self.channel.update(op=UpdateOps.Supported.SET,**{fname: val})
+        if not val:
+            return False
+        if skip_val and skip_val.lower() == val.lower():
+            return True
+        self.channel.update(op=UpdateOps.Supported.SET,**{fname: val})
         return True
 
     def _state_handler_default(self, event):
@@ -605,7 +608,7 @@ class BotChat(BaseStateMachine):
     def state_handler_edit_channel_info(self, event):
         if self._state_handler_edit_channel_field(fname='name',
                                                   event=event,
-                                                  skip_val='@'):
+                                                  skip_val='skip'):
             self.set_state('EditChannelDesc')
         else:
             self._state_handler_default(event=event)
@@ -630,7 +633,7 @@ class BotChat(BaseStateMachine):
     def state_handler_edit_channel_name(self, event):
         if self._state_handler_edit_channel_field(fname='desc',
                                                   event=event,
-                                                  skip_val='@'):
+                                                  skip_val='skip'):
             self.set_state('Root')
         else:
             self._state_handler_default(event=event)

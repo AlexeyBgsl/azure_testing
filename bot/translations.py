@@ -70,11 +70,11 @@ DefaultStrings = dict(
     SID_CHANNEL_INFO='Channel Info',
     SID_EDIT_CHANNEL_INFO='Name and Description',
     SID_EDIT_CHANNEL_INFO_PROMPT=(
-        'Enter a new name. Type @ if you don\'t want to change it and need to '
-        'change the description only.'
+        'Enter a new name. Type \'skip\' if you don\'t want to change it and '
+        'need to change the description only.'
     ),
     SID_EDIT_CHANNEL_DESC_PROMPT=(
-        'Enter a new description. Type @ if you don\'t want to change it.'
+        'Enter a new description. Type \'skip\' if you don\'t want to change it.'
     ),
     SID_DEL_CHANNEL_PROMPT='Are you sure?',
     SID_CHANNEL_REMOVED="Channel successfully removed",
