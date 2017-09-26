@@ -1,10 +1,10 @@
 import logging
-from collections import namedtuple
 from fbmq import QuickReply, Template, Attachment
 from bot.translations import BotString
 from db import Channel, Annc, UpdateOps, Feedback, m_link
 from bot.horn import Horn
 from bot.config import CONFIG
+from bot.mail import GMailer
 
 
 BotChatClbTypes = dict(
@@ -401,10 +401,18 @@ class BotChat(BaseStateMachine):
     @BaseStateMachine.state_handler('Feedback')
     def state_handler_feedback(self, event):
         if event.is_text_message:
-            f = Feedback(owner_uid=self.user.oid,
-                         text=event.message_text.strip())
-            f.save()
-            self.send_simple('SID_FEEDBACK_DONE')
+            g = GMailer(sender_gmail=CONFIG['FEEDBACK_SENDER_GMAIL'],
+                        pwd=CONFIG['FEEDBACK_SENDER_PASSWD'])
+            data = dict(
+                first_name=self.user.first_name,
+                last_name=self.user.last_name,
+                fbid=self.user.fbid,
+                text=event.message_text.strip()
+            )
+            body = CONFIG['FEEDBACK_BODY'].format(**data)
+            g.send(dest=CONFIG['FEEDBACK_DEST'],
+                   subj=CONFIG['FEEDBACK_SUBJ'],
+                   body=body)
             self.set_state('Root')
         else:
             self._state_handler_default(event=event)

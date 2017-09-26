@@ -17,11 +17,21 @@ CHANNELS_INFO_URI = os.getenv('CHANNELS_BASE_URI',
                               'http://locanobot.azurewebsites.net/channels/')
 assert CHANNELS_INFO_URI
 
+
 CONFIG = dict(
     ACCESS_TOKEN='',
     VERIFY_TOKEN='loc@no',
     PROJECT_ID='locano-172715',
-    CHANNELS_INFO_URI=CHANNELS_INFO_URI
+    CHANNELS_INFO_URI=CHANNELS_INFO_URI,
+    FEEDBACK_SENDER_GMAIL = os.getenv('FEEDBACK_SENDER_GMAIL',
+                                      'locano.net@gmail.com'),
+    FEEDBACK_SENDER_PASSWD = os.getenv('FEEDBACK_SENDER_PASSWD', '515716827'),
+    FEEDBACK_DEST = os.getenv('FEEDBACK_DEST', 'botfeedback@locano.net'),
+    FEEDBACK_SUBJ = os.getenv('FEEDBACK_SUBJ', 'Locano Bot Feedback'),
+    FEEDBACK_BODY = os.getenv('FEEDBACK_BODY',
+                              ('User: {first_name} {last_name}\n'
+                               'FB ID: {fbid}\n'
+                               'Text: {text}')),
 )
 
 def init_config():
