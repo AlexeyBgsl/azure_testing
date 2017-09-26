@@ -106,7 +106,7 @@ echo Not using virtual environment.
 
 :: 4. Install packages
 echo Pip install requirements.
-D:\home\Python353x64\python.exe -m pip install --upgrade -r %DEPLOYMENT_TARGET%\requirements.txt
+D:\home\Python354x64\python.exe -m pip install --upgrade -r %DEPLOYMENT_TARGET%\requirements.txt
 IF !ERRORLEVEL! NEQ 0 goto error
 
 REM Add additional package installation here
