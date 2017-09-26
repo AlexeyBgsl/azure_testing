@@ -1,4 +1,5 @@
 import logging
+from datetime import timedelta
 from db import User, Channel
 from bot.translations import BotString
 
@@ -13,10 +14,18 @@ class Horn():
             if not channel:
                 raise ValueError("Annc#{} belongs to nonexistent channel#{}".format(
                         annc.oid, annc.chid))
-        message = str(BotString('SID_ANNC_MESSAGE',
-                                user=user,
-                                channel=channel,
-                                annc=annc))
+
+        created = timedelta(hours=user.timezone) + annc.created
+        date = created.strftime("%B %d, %Y")
+        time = created.strftime("%I:%m %p")
+        message = ("// {chname}\n"
+                   "{title}\n\n"
+                   "{text}\n"
+                   "// {time} // {date}").format(chname=channel.name,
+                                                 title=annc.title,
+                                                 text=annc.text,
+                                                 time=time,
+                                                 date=date)
         self.page.send(user.fbid, message)
 
     def notify(self, annc):
