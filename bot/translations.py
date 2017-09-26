@@ -96,9 +96,10 @@ DefaultStrings = dict(
     SID_SUB_UNSUBSCRIBE_PROMPT='Are you sure?',
     SID_SUB_REMOVED="Done",
     SID_SUB_UNCHANGED="Subscription remained",
-    SID_ANNC_GET_TITLE_PROMPT="Please enter the Announcement title",
-    SID_ANNC_GET_TEXT_PROMPT="Please enter the Announcement text",
-    SID_ANNC_DONE="Announcement Created",
+    SID_ANNC_GET_TITLE_PROMPT="Give the announcement title",
+    SID_ANNC_GET_TEXT_PROMPT=(
+        "Give а description. It may be short or long text with links if you need to"
+    ),
     SID_ANNC_ROOT_PROMPT="Please choose channel",
     SID_ANNC_CREATE_CHANNEL_PROMPT="Please create a channel first",
     SID_ANNC_NEW_CHANNEL="New Channel",
