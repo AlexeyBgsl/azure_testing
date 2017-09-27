@@ -25,7 +25,7 @@ DefaultStrings = dict(
         'your service:'),
     SID_FEEDBACK_PROMPT='Please send your feedback to us',
     SID_FEEDBACK_DONE=('Thanks a lot for your feedback!\n'''
-                       'We\'ll learn it ASAP and get back to you shortly with '
+                       'We\'ll study it ASAP and get back to you shortly to share '
                        'our thoughts on it.'),
     SID_HOW_TO='How To',
     SID_FEEDBACK='Feedback',
@@ -41,37 +41,37 @@ DefaultStrings = dict(
     SID_MY_SUBSCRIPTIONS='Subscriptions',
     SID_MY_CHANNELS_PROMPT=(
         'Information channel is a means of delivering announcements to '
-        'subscribers.  Browse your channels to share or edit them or create a '
+        'subscribers. Browse through your channels to share or edit them or create a '
         'new one.'),
     SID_HELP_CHANNEL_DETAILS='More',
     SID_HELP_CHANNEL_EXAMPLES='Examples',
     SID_HELP_CHANNELS_PROMPT=('Channels are used to broadcast announcements.\n'
-                              'Announcements arrive to all the Channel Subscribers'),
-    SID_GET_CHANNEL_NAME_PROMPT='Enter channel name',
-    SID_GET_CHANNEL_DESC_PROMPT='Enter channel description',
+                              'Announcements are dispatched to all the Channel Subscribers'),
+    SID_GET_CHANNEL_NAME_PROMPT='Enter channel name:',
+    SID_GET_CHANNEL_DESC_PROMPT='Enter channel description:',
     SID_GET_CHANNEL_PIC_PROMPT=('Send a picture that will serve as the '
                                 'channel\'s cover image to us\n\n'
                                 'For assistance: http://tinyurl.com/yc2r5q43'),
     SID_CHANNEL_CREATED=('Add a picture that will serve as the channel\'s '
                          'cover image or press Done'),
-    SID_POST_CHANNEL_CREATED_PROMPT=('Your channel $CHANNEL_NAME is created, '
-                                     'now it is the best time to make first '
+    SID_POST_CHANNEL_CREATED_PROMPT=('Your channel $CHANNEL_NAME has been created, '
+                                     'now is the best time to make your first '
                                      'announcement:'),
     SID_SELECT_CHANNEL_EDIT_ACTION_PROMPT=(
         'Change name, description or cover image of $CHANNEL_NAME. Please '
-        'note, you can skip some steps:'),
+        'note, you can skip certain steps:'),
     SID_EDIT_CHANNEL_PIC='Add a New Image',
     SID_DELETE_CHANNEL='Delete Channel',
     SID_SELECT_CHANNEL_SHARE_ACTION_PROMPT=(
-        'Choose your preferred method of sharing the channel. Also you can '
-        'copy following URL  to be shared outside the Messenger to folks be '
-        'able to subscribe your channel anywhere.'
+        'Choose your preferred method of sharing the channel. You can also '
+        'copy the URL below and share it outside the Messenger for folks to be '
+        'able to subscribe to your channel anywhere.'
     ),
     SID_CHANNEL_INFO='Channel Info',
     SID_EDIT_CHANNEL_INFO='Name and Description',
     SID_EDIT_CHANNEL_INFO_PROMPT=(
         'Enter a new name. Type \'skip\' if you don\'t want to change it and '
-        'need to change the description only.'
+        'only need to change the description.'
     ),
     SID_EDIT_CHANNEL_DESC_PROMPT=(
         'Enter a new description. Type \'skip\' if you don\'t want to change it.'
@@ -82,25 +82,25 @@ DefaultStrings = dict(
     SID_LIST_SUBSCRIPTIONS="List Subscriptions",
     SID_ADD_SUBSCRIPTION="Subscribe",
     SID_DEL_SUBSCRIPTION="Unsubscribe",
-    SID_1ST_SUBSCRIPTION_PROMPT='Subscribe to a channel is good idea',
+    SID_1ST_SUBSCRIPTION_PROMPT='Subscribing to a channel is a good idea',
     SID_SUBSCRIPTIONS_PROMPT='Here are your subscriptions:',
     SID_SUBSCRIPTION_ADD_PROMPT=(
-        "You can subscribe yet another channel. Enter desired Channel ID "
-        "or channel URL."
+        "You can subscribe to yet another channel. Enter the desired Channel ID "
+        "or channel URL:"
     ),
     SID_SUB_ADDED="Subscription to channel $CHANNEL_NAME added",
     SID_SUB_EXISTS="You are already subscribed to channel $CHANNEL_NAME",
-    SID_ENTER_CHANNEL_ID_PROMPT="Enter desired Channel ID",
+    SID_ENTER_CHANNEL_ID_PROMPT="Enter the desired Channel ID:",
     SID_NO_SUBS_PROMPT="You have no active subscriptions",
     SID_SELECT_SUB_ACTION_PROMPT='What do you want to do next?',
     SID_SUB_UNSUBSCRIBE_PROMPT='Are you sure?',
     SID_SUB_REMOVED="Done",
-    SID_SUB_UNCHANGED="Subscription remained",
-    SID_ANNC_GET_TITLE_PROMPT="Give the announcement title",
+    SID_SUB_UNCHANGED="Subscription kept",
+    SID_ANNC_GET_TITLE_PROMPT="Enter the announcement title:",
     SID_ANNC_GET_TEXT_PROMPT=(
-        "Give а description. It may be short or long text with links if you need to"
+        "Enter а description. This may be a short or a long text with links if need be"
     ),
-    SID_ANNC_ROOT_PROMPT="Please choose channel",
+    SID_ANNC_ROOT_PROMPT="Please choose a channel",
     SID_ANNC_CREATE_CHANNEL_PROMPT="Please create a channel first",
     SID_ANNC_NEW_CHANNEL="New Channel",
     SID_ANNC_SELECT_CHANNEL="Select Channel",
@@ -112,7 +112,7 @@ DefaultStrings = dict(
     SID_EDIT_CHANNEL_BTN="Edit",
     SID_SHARE_CHANNEL_BTN="Sharing Options",
     SID_MORE="More",
-    SID_NO_MORE_ANNCS='There is nothing else in this channel.',
+    SID_NO_MORE_ANNCS='There is nothing else on this channel.',
     SID_SHOW_EARIER_ANNCS_PROMPT=('Do you want to see earlier announcements '
                                   'made on this channel?')
 )
