@@ -10,7 +10,7 @@ assert STORAGE_ACCOUNT_KEY
 FB_PAGE_NAME = os.getenv('FB_PAGE_NAME', 'LocanoDbg-2074044709489393')
 assert FB_PAGE_NAME
 
-MONGODB_URI = os.getenv('MONGODB_URI', 'mongodb://locanobot:GQ3JFOK8152OWXa7ntCZPQuV61vhQKmtfRVaBgxkXV9JSaVyv0n5dllhIeMrB8X9JRbR5DQ4OFOAmbrqn8cukg==@locanobot.documents.azure.com:10255/?ssl=true&replicaSet=globaldb')
+MONGODB_URI = os.getenv('MONGODB_URI', 'mongodb://locanonet:HvoGyMSUgOsEHsLUNjmavx1eAqer7FJFFXAjnqvSeE2LbwMQOopp4HXd7UQP5ocPnkdUpT4gnjFRz6Kj4fZoCQ==@locanonet.documents.azure.com:10255/?ssl=true&replicaSet=globaldb')
 assert MONGODB_URI
 
 MONGODB_DB = os.getenv('MONGODB_DB', 'main')
