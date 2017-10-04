@@ -716,7 +716,7 @@ class BotChat(BaseStateMachine):
 
     @BaseStateMachine.state_handler('AddSub')
     def state_handler_add_sub(self, event):
-        if self._state_handler_add_sub(self.event):
+        if self._state_handler_add_sub(event=event):
             self.set_state('Root')
         else:
             self._state_handler_default(event=event)
