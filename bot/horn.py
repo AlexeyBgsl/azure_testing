@@ -17,7 +17,7 @@ class Horn():
 
         created = timedelta(hours=user.timezone) + annc.created
         date = created.strftime("%B %d, %Y")
-        time = created.strftime("%I:%m %p")
+        time = created.strftime("%I:%M %p")
         message = ("// {chname}\n"
                    "{title}\n\n"
                    "{text}\n"
