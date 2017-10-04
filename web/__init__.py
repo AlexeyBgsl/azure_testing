@@ -4,7 +4,7 @@ Locano Web Aux routes implementation
 import logging
 from flask import Blueprint
 from flask import render_template, redirect, url_for, request, abort
-from db import Channel
+from db import Channel, DCRS
 
 
 CHANNELS_ROOT = '/channels'
@@ -20,7 +20,7 @@ channels = Blueprint('channel', __name__,
 @channels.route('/<uchid>')
 def channel_root(uchid=None):
     if uchid:
-        c = Channel.by_uchid_str(uchid)
+        c = DCRS.Channels.by_uchid_str(uchid)
         if c:
             return render_template('channel.html', channel=c)
     abort(404)

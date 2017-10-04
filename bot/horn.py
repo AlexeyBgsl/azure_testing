@@ -1,6 +1,6 @@
 import logging
 from datetime import timedelta
-from db import User, Channel
+from db import User, Channel, DCRS
 from bot.translations import BotString
 
 
@@ -10,7 +10,7 @@ class Horn():
 
     def notify_one(self, user, annc, channel=None):
         if not channel:
-            channel = Channel.by_oid(annc.chid)
+            channel = DCRS.Channels.by_oid(annc.chid)
             if not channel:
                 raise ValueError("Annc#{} belongs to nonexistent channel#{}".format(
                         annc.oid, annc.chid))
@@ -29,10 +29,10 @@ class Horn():
         self.page.send(user.fbid, message)
 
     def notify(self, annc):
-        c = Channel.by_oid(annc.chid)
+        c = DCRS.Channels.by_oid(annc.chid)
         if c:
             for uid in c.subs:
-                u = User.by_oid(uid)
+                u = DCRS.Users.by_oid(uid)
                 if u:
                     self.notify_one(user=u, annc=annc, channel=c)
                 else:

@@ -1,7 +1,7 @@
 import logging
 from fbmq import QuickReply, Template, Attachment
 from bot.translations import BotString
-from db import Channel, Annc, UpdateOps, m_link
+from db import Channel, Annc, DCRS, UpdateOps, m_link
 from bot.horn import Horn
 from bot.config import CONFIG
 from bot.mail import GMailer
@@ -32,10 +32,10 @@ class Payload(object):
                 if len(params) == 4:
                     p = params[3].split(cls.SUB_DELIMITER)
                     if p[0] == 'ch':
-                        channel = Channel.by_oid(p[1])
+                        channel = DCRS.Channels.by_oid(p[1])
                     elif p[0] == 'an':
-                        annc = Annc.by_oid(p[1])
-                        channel = Channel.by_oid(annc.chid)
+                        annc = DCRS.Anncs.by_oid(p[1])
+                        channel = DCRS.Channels.by_oid(annc.chid)
                 return cls(k, params[1], params[2], channel=channel, annc=annc)
 
         return None
@@ -286,7 +286,7 @@ class BotChat(BaseStateMachine):
 
     def _state_init_show_anncs(self):
         assert self.channel
-        anncs = Annc.find(chid=self.channel.oid)
+        anncs = DCRS.Anncs.find(chid=self.channel.oid)
         acnt = len(anncs)
         skip = 0
         if hasattr(self, 'anncs_to_skip'):
@@ -359,7 +359,7 @@ class BotChat(BaseStateMachine):
         if event.is_text_message:
             logging.debug("[U#%s] Desired uchid is: %s",
                           event.sender_id, event.message_text)
-            channel = Channel.by_uchid_str(event.message_text)
+            channel = DCRS.Channels.by_uchid_str(event.message_text)
             if channel:
                 if self.user.oid in channel.subs:
                     self.send_simple('SID_SUB_EXISTS', channel=channel)
@@ -468,7 +468,7 @@ class BotChat(BaseStateMachine):
 
     @BaseStateMachine.state_initiator('MyChannels')
     def state_init_my_channels(self):
-        channels = Channel.find(owner_uid=self.user.oid)
+        channels = DCRS.Channels.find(owner_uid=self.user.oid)
         ctas = [CTA(sid='SID_CREATE_CHANNEL', action_id='CreateChannel')]
         if len(channels):
             ctas.append(CTA(sid='SID_BROWSE_CHANNELS',
@@ -481,14 +481,14 @@ class BotChat(BaseStateMachine):
 
     @BaseStateMachine.state_initiator('MySubscriptions')
     def state_init_my_subscriptions(self):
-        subs = Channel.all_subscribed(self.user.oid)
+        subs = DCRS.Channels.all_subscribed(uid=self.user.oid)
         if not len(subs):
             ctas = [CTA(sid='SID_ADD_SUBSCRIPTION', action_id='AddSub')]
             self.send_simple('SID_1ST_SUBSCRIPTION_PROMPT', ctas=ctas)
         else:
             self.send_simple('SID_SUBSCRIPTIONS_PROMPT',
                              std_quick_replies=False)
-            channels = Channel.all_subscribed(uid=self.user.oid)
+            channels = DCRS.Channels.all_subscribed(uid=self.user.oid)
             ctas = [
                 CTA(sid='SID_VIEW_SUB_BTN', action_id='ViewChannel'),
                 CTA(sid='SID_DEL_SUB_BTN', action_id='DelSub'),
@@ -507,7 +507,7 @@ class BotChat(BaseStateMachine):
 
     @BaseStateMachine.state_initiator('MakeAnnouncement')
     def state_init_make_annc(self):
-        channels = Channel.find(owner_uid=self.user.oid)
+        channels = DCRS.Channels.find(owner_uid=self.user.oid)
         ctas = [CTA(sid='SID_ANNC_NEW_CHANNEL', action_id='CreateChannel')]
         if len(channels):
             ctas.append(CTA(sid='SID_ANNC_SELECT_CHANNEL',
@@ -599,7 +599,7 @@ class BotChat(BaseStateMachine):
 
     @BaseStateMachine.state_initiator('BrowseChannels')
     def state_init_browse_channels(self):
-        channels = Channel.find(owner_uid=self.user.oid)
+        channels = DCRS.Channels.find(owner_uid=self.user.oid)
         ctas = [
             CTA(sid='SID_VIEW_CHANNEL_BTN', action_id='ViewChannel'),
             CTA(sid='SID_EDIT_CHANNEL_BTN', action_id='SelectEditChannelType'),
@@ -745,7 +745,7 @@ class BotChat(BaseStateMachine):
 
     @BaseStateMachine.state_initiator('AnncSelectChannel')
     def state_init_annc_select_channel(self):
-        channels = Channel.find(owner_uid=self.user.oid)
+        channels = DCRS.Channels.find(owner_uid=self.user.oid)
         ctas = [
             CTA(sid='SID_SELECT_THIS', action_id='MakeAnnc'),
         ]
@@ -845,7 +845,8 @@ class BotChat(BaseStateMachine):
     def on_ref(self, ref):
         r = BotRef(ref=ref)
         if self.REF_SUBSCRIBE_ACTION in r.params:
-            c = Channel.find_unique(uchid=r.params[self.REF_SUBSCRIBE_ACTION])
+            c = DCRS.Channels.find_unique(
+                uchid=r.params[self.REF_SUBSCRIBE_ACTION])
             if c:
                 if self.user.oid in c.subs:
                     sid = 'SID_SUB_EXISTS'

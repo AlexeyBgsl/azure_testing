@@ -2,7 +2,7 @@ import logging
 import fbmq
 import functools
 from bot.config import CONFIG
-from db import User, UpdateOps
+from db import User, DCRS, UpdateOps
 from bot.chat import (
     BotChatClbTypes,
     chat_clb_handler,
@@ -57,9 +57,8 @@ class BotPage(fbmq.Page):
         self.show_persistent_menu(BotChat.get_menu_buttons())
 
     def _user_from_fb_profile(self, fbid):
-        user = User.create(self.get_user_profile(fbid))
-        user.fbid = fbid
-        return user
+        return DCRS.Users.create(fbid=fbid,
+                                 fb_profile=self.get_user_profile(fbid))
 
     def _check_message_seq(self, user, event):
         message_seq = event.message_seq
@@ -72,10 +71,9 @@ class BotPage(fbmq.Page):
         return True
 
     def create_or_update_user(self, fbid):
-        user = User.find_unique(fbid=fbid)
+        user = DCRS.Users.find_unique(fbid=fbid)
         if user is None:
             user = self._user_from_fb_profile(fbid)
-            user.save_unique(fbid=fbid)
         return user
 
     @dump_member_func
