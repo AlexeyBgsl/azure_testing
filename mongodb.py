@@ -2,7 +2,7 @@ from abc import ABC
 from enum import Enum
 from pymongo import MongoClient
 from bson.objectid import ObjectId
-from .config import MONGODB_URI, MONGODB_DB, FB_PAGE_NAME
+from .config import CONFIG, DCRS
 
 
 OID_KEY=u'_id'
@@ -49,28 +49,7 @@ class UpdateOps(object):
 
 
 class BasicEntry(ABC):
-    table = None
     INIT_FIELDS = None
-
-    @classmethod
-    def by_oid(cls, oid):
-        if isinstance(oid, str):
-            oid = ObjectId(oid)
-        e = cls.table.read(oid)
-        return cls(entity = e) if e else None
-
-    @classmethod
-    def all(cls):
-        return cls.find()
-
-    @classmethod
-    def find(cls, **kwargs):
-        return [cls(entity=e) for e in cls.table.query(**kwargs)]
-
-    @classmethod
-    def find_unique(cls, **kwargs):
-        e = cls.table.query_unique(**kwargs)
-        return cls(entity=e) if e else None
 
     def __add_db_property(self, name):
         if not name in self.db_fields:
@@ -87,9 +66,10 @@ class BasicEntry(ABC):
             pass
         self.__add_db_property(name)
 
-    def __init__(self, **kwargs):
-        assert self.table
+    def __init__(self, table, **kwargs):
+        assert table
         assert self.INIT_FIELDS
+        self.table = table
         self.oid = None
         self.db_fields = []
         for f in self.INIT_FIELDS:
@@ -165,21 +145,23 @@ class BasicEntry(ABC):
 
 
 class BasicTable(ABC):
-    client = MongoClient(MONGODB_URI)
-    db = client[_adjust_mongodb_db_name(MONGODB_DB)]
+    obj_type = None
 
-    @staticmethod
-    def __page_dict(d):
-        d['fbpage'] = FB_PAGE_NAME
+    def __page_dict(self, d):
+        d['fbpage'] = self.fb_page_name
         return d
 
-    def __init__(self, col_name):
+    def __init__(self, mongodb_uri, db_name, col_name, fb_page_name):
+        assert type(self).obj_type
+        self.client = MongoClient(mongodb_uri)
+        self.db = self.client[_adjust_mongodb_db_name(db_name)]
         self.collection = self.db[col_name]
+        self.fb_page_name = fb_page_name
 
-    def insert_or_update(self, filter, entry):
-        assert entry.oid is None
+    def insert_or_update(self, filter, obj):
+        assert obj.oid is None
         u = UpdateOps(op=UpdateOps.Supported.SET,
-                      **self.__page_dict(entry.to_dict()))
+                      **self.__page_dict(obj.to_dict()))
         result = self.collection.update_one(self.__page_dict(filter),
                                             u.update,
                                             upsert=True)
@@ -190,26 +172,40 @@ class BasicTable(ABC):
         result = self.collection.insert_one(self.__page_dict(entry.to_dict()))
         return result.inserted_id
 
-    def read(self, oid):
+    def by_oid(self, oid):
         assert oid
-        return self.collection.find_one({OID_KEY: oid})
+        if isinstance(oid, str):
+            oid = ObjectId(oid)
+        e = self.collection.find_one({OID_KEY: oid})
+        return self.obj_type(table=self, entity=e) if e else None
 
     def delete(self, oid):
         self.collection.find_one_and_delete({OID_KEY: oid})
 
-    def update(self, entry, update):
+    def update(self, obj, update):
         return self.collection.update_one(
-            self.__page_dict({OID_KEY: entry.oid}),
+            self.__page_dict({OID_KEY: obj.oid}),
             update)
 
-    def query(self, **kwargs):
+    def raw_find(self, **kwargs):
         return list(self.collection.find(self.__page_dict(kwargs)))
 
-    def query_unique(self, **kwargs):
+    def raw_find_unique(self, **kwargs):
         results = self.collection.find(self.__page_dict(kwargs))
         if results.count() > 1:
             raise ValueError("{}: {}: ({!r}) must be unique".format(
-                FB_PAGE_NAME, self.collection.name, kwargs))
+                self.fb_page_name, self.collection.name, kwargs))
         for r in results.limit(-1):
             return r
         return None
+
+    def find(self, **kwargs):
+        return [self.obj_type(table=self, entity=e)
+                for e in self.raw_find(**kwargs)]
+
+    def find_unique(self, **kwargs):
+        r = self.raw_find_unique(**kwargs)
+        return self.obj_type(table=self, entity=r) if r else None
+
+    def all(self):
+        return self.find()

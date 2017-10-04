@@ -6,38 +6,28 @@ import os
 import pyqrcode
 import datetime
 from .mongodb import BasicEntry, BasicTable, EntryField, UpdateOps
-from .blob import FileStorage
-from .config import FB_PAGE_NAME
+from .config import CONFIG, DCRS
 
 MAX_CHID_CYPHERS = 9
 
 
 def m_link(ref):
-    return 'http://m.me/' + FB_PAGE_NAME + '?ref=' + ref
+    return 'http://m.me/' + CONFIG['FB_PAGE_NAME'] + '?ref=' + ref
 
 def _blob_fname(fname):
-    return FB_PAGE_NAME + '.' + fname
+    return CONFIG['FB_PAGE_NAME'] + '.' + fname
 
-class Users(BasicTable):
-    def __init__(self):
-        super().__init__(col_name="Users")
-
-    def by_fbid(self, fbid):
-        return self.query_unique(fbid=fbid)
 
 class User(BasicEntry):
-    table = Users()
     INIT_FIELDS = [
         EntryField('fbid', 0),
         EntryField('fbmsgseq', 0),
         EntryField('state_payload', '')
     ]
 
-    @classmethod
-    def create(cls, data):
-        u = cls()
-        u.from_dict(data)
-        return u
+    def __init__(self, table=None, entity=None):
+        super().__init__(table=table if table else DCRS.Users,
+                         entity=entity)
 
     def delete(self):
         channels = Channel.table.all_subscribed(self.oid)
@@ -46,13 +36,26 @@ class User(BasicEntry):
         super().delete()
 
 
-class Channels(BasicTable):
-    def __init__(self):
-        super().__init__(col_name="Channels")
+class Users(BasicTable):
+    obj_type = User
+
+    def __init__(self, mongodb_uri, db_name, fb_page_name):
+        super().__init__(mongodb_uri=mongodb_uri,
+                         db_name=db_name,
+                         fb_page_name=fb_page_name,
+                         col_name="Users")
+
+    def by_fbid(self, fbid):
+        return self.find_unique(fbid=fbid)
+
+    def create(self, fbid, fb_profile):
+        obj = self.obj_type(table=self)
+        obj.from_dict(fb_profile)
+        obj.fbid = fbid
+        obj.save_unique(fbid=fbid)
 
 
 class Channel(BasicEntry):
-    table = Channels()
     INIT_FIELDS = [
         EntryField('owner_uid', None),
         EntryField('name', None),
@@ -67,44 +70,16 @@ class Channel(BasicEntry):
 
     def _alloc_uchid(self):
         while True:
-            self.uchid = self.gen_uchid()
+            self.uchid = self.table.gen_uchid()
             self.status = 'pending'
             super().save()
-            r = super().find(uchid=self.uchid)
+            r = self.table._find(uchid=self.uchid)
             assert len(r)
             if len(r) == 1:
                 self.update(op=UpdateOps.Supported.SET, status='ready')
                 break
             logging.info("User CHID#%s is already in use. Regenerating... ",
                          self.uchid)
-
-    @staticmethod
-    def gen_uchid():
-        uchid = uuid.uuid4().int % pow(10, MAX_CHID_CYPHERS)
-        return str(uchid).ljust(MAX_CHID_CYPHERS, '0')
-
-    @classmethod
-    def find(cls, **kwargs):
-        return super().find(status='ready', **kwargs)
-
-    @classmethod
-    def find_unique(cls, **kwargs):
-        return super().find_unique(status='ready', **kwargs)
-
-    @classmethod
-    def all_subscribed(cls, uid):
-        return cls.find(subs=uid)
-
-    @staticmethod
-    def uchid_from_str(str):
-        uchid = re.sub(r"\s+", "", str, flags=re.UNICODE)
-        uchid = re.sub(r"-", "", uchid)
-        return uchid if uchid.isnumeric() else None
-
-    @classmethod
-    def by_uchid_str(cls, str):
-        uchid = cls.uchid_from_str(str)
-        return cls.find_unique(uchid=uchid) if uchid else None
 
     @classmethod
     def create(cls, name, owner_uid):
@@ -114,8 +89,9 @@ class Channel(BasicEntry):
         c._alloc_uchid()
         return c
 
-    def __init__(self, entity=None):
-        super().__init__(entity=entity)
+    def __init__(self, table=None, entity=None):
+        super().__init__(table if table else DCRS.Channels,
+                         entity=entity)
 
     def set_code(self, ref=None, messenger_code_url=None):
         assert self.oid
@@ -125,16 +101,16 @@ class Channel(BasicEntry):
             url = pyqrcode.create(m_link(ref), error='Q')
             png_fname = os.path.join(tempfile.gettempdir(), self.uchid)
             url.png(png_fname, scale=5)
-            FileStorage.upload(png_fname, 'qr-code', blob_fname,
-                               content_type='image/png')
+            file_storage.upload(png_fname, 'qr-code', blob_fname,
+                                content_type='image/png')
             os.remove(png_fname)
-            url = FileStorage.get_url('qr-code', blob_fname)
+            url = file_storage.get_url('qr-code', blob_fname)
             opts.add(UpdateOps.Supported.SET, qr_code=url)
         if messenger_code_url:
-            FileStorage.upload_from_url(messenger_code_url,
-                                        'messenger-code',
-                                        blob_fname)
-            url = FileStorage.get_url('messenger-code', blob_fname)
+            file_storage.upload_from_url(messenger_code_url,
+                                         'messenger-code',
+                                         blob_fname)
+            url = file_storage.get_url('messenger-code', blob_fname)
             opts.add(UpdateOps.Supported.SET, messenger_code=url)
         if opts.has_update:
             self.update_ex(opts)
@@ -169,18 +145,50 @@ class Channel(BasicEntry):
                             str(self.oid), str(uid))
 
     def delete(self):
-        FileStorage.remove('qr-code', self.uchid)
-        FileStorage.remove('messenger-code', self.uchid)
+        file_storage.remove('qr-code', self.uchid)
+        file_storage.remove('messenger-code', self.uchid)
         super().delete()
 
 
-class Anncs(BasicTable):
-    def __init__(self):
-        super().__init__(col_name="Anncs")
+class Channels(BasicTable):
+    obj_type = Channel
+
+    @staticmethod
+    def gen_uchid():
+        uchid = uuid.uuid4().int % pow(10, MAX_CHID_CYPHERS)
+        return str(uchid).ljust(MAX_CHID_CYPHERS, '0')
+
+    @staticmethod
+    def uchid_from_str(str):
+        uchid = re.sub(r"\s+", "", str, flags=re.UNICODE)
+        uchid = re.sub(r"-", "", uchid)
+        return uchid if uchid.isnumeric() else None
+
+    def __init__(self, mongodb_uri, db_name, fb_page_name):
+        super().__init__(mongodb_uri=mongodb_uri,
+                         db_name=db_name,
+                         fb_page_name=fb_page_name,
+                         col_name="Channels")
+
+    def _find(self, **kwargs):
+        return super().find(**kwargs)
+
+    def find(self, **kwargs):
+        return super().find(status='ready', **kwargs)
+
+
+    def find_unique(self, **kwargs):
+        return super().find_unique(status='ready', **kwargs)
+
+    def all_subscribed(self, uid):
+        return self.find(subs=uid)
+
+    def by_uchid_str(self, str):
+        uchid = self.uchid_from_str(str)
+        return self.find_unique(uchid=uchid) if uchid else None
 
 
 class Annc(BasicEntry):
-    table = Anncs()
     INIT_FIELDS = [
         EntryField('title', None),
         EntryField('chid', None),
@@ -189,20 +197,26 @@ class Annc(BasicEntry):
         EntryField('created', '')
     ]
 
-    def __init__(self, title=None, chid=None, owner_uid=None, entity=None):
-        super().__init__(title=title, chid=chid, owner_uid=owner_uid,
+    def __init__(self, title=None, chid=None, owner_uid=None, entity=None,
+                 table=None):
+        super().__init__(table=table if table else DCRS.Anncs,
+                         title=title, chid=chid, owner_uid=owner_uid,
                          entity=entity)
         if not entity:
             self.created = datetime.datetime.utcnow()
 
 
-class Strings(BasicTable):
-    def __init__(self):
-        super().__init__(col_name="Strings")
+class Anncs(BasicTable):
+    obj_type = Annc
+
+    def __init__(self, mongodb_uri, db_name, fb_page_name):
+        super().__init__(mongodb_uri=mongodb_uri,
+                         db_name=db_name,
+                         fb_page_name=fb_page_name,
+                         col_name="Anncs")
 
 
 class String(BasicEntry):
-    table = Strings()
     LOCALE_MARKER = 'locale'
     LOCALE_DELIMITER = ':'
     DEFAULT_LOCALE = 'en_US'
@@ -221,10 +235,11 @@ class String(BasicEntry):
             return t[1]
         return None
 
-    def __init__(self, sid=None):
-        super().__init__(sid=sid)
+    def __init__(self, sid=None, table=None, entity=None):
+        super().__init__(table if table else DCRS.Strings,
+                         sid=sid, entity=entity)
         if sid:
-            e = self.table.query_unique(sid=sid)
+            e = self.table.raw_find_unique(sid=sid)
             if e:
                 self.from_entity(e)
 
@@ -251,3 +266,21 @@ class String(BasicEntry):
             if locale:
                 l.append(locale)
         return l
+
+
+class Strings(BasicTable):
+    obj_type = String
+
+    def __init__(self, mongodb_uri, db_name, fb_page_name):
+        super().__init__(mongodb_uri=mongodb_uri,
+                         db_name=db_name,
+                         fb_page_name=fb_page_name,
+                         col_name="Strings")
+
+
+def update_defaults_models():
+    collection_types = [ Users, Channels, Anncs, Strings ]
+    for t in collection_types:
+        DCRS.set(t.__name__, t(mongodb_uri=CONFIG['MONGODB_URI'],
+                               db_name=CONFIG['MONGODB_DB'],
+                               fb_page_name=CONFIG['FB_PAGE_NAME']))
