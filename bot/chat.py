@@ -366,7 +366,8 @@ class BotChat(BaseStateMachine):
                 else:
                     channel.subscribe(self.user.oid)
                     if self.user.oid in channel.subs:
-                        self.send_simple('SID_SUB_ADDED', channel=channel)
+                        self.channel = channel
+                        self.send_simple('SID_SUB_ADDED')
                         return True
                     else:
                         self.send_simple('SID_ERROR', channel=channel)
@@ -501,7 +502,7 @@ class BotChat(BaseStateMachine):
     @BaseStateMachine.state_handler('MySubscriptions')
     def state_handler_my_subscriptions(self, event):
         if self._state_handler_add_sub(event=event):
-            self.set_state('Root')
+            self.set_state('ViewChannel')
         else:
             self._state_handler_default(event=event)
 
@@ -717,7 +718,7 @@ class BotChat(BaseStateMachine):
     @BaseStateMachine.state_handler('AddSub')
     def state_handler_add_sub(self, event):
         if self._state_handler_add_sub(event=event):
-            self.set_state('Root')
+            self.set_state('ViewChannel')
         else:
             self._state_handler_default(event=event)
 
