@@ -425,8 +425,8 @@ class BotChat(BaseStateMachine):
     @BaseStateMachine.state_handler('Feedback')
     def state_handler_feedback(self, event):
         if event.is_text_message:
-            g = GMailer(sender_gmail=CONFIG['FEEDBACK_SENDER_GMAIL'],
-                        pwd=CONFIG['FEEDBACK_SENDER_PASSWD'])
+            g = GMailer(sender_gmail=CONFIG['BOT_SENDER_GMAIL'],
+                        pwd=CONFIG['BOT_SENDER_PASSWD'])
             data = dict(
                 first_name=self.user.first_name,
                 last_name=self.user.last_name,
