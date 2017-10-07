@@ -1,6 +1,7 @@
 import logging
 import fbmq
 import functools
+import traceback
 from bot.config import CONFIG
 from db import User, DCRS, UpdateOps
 from bot.chat import (
@@ -11,6 +12,7 @@ from bot.chat import (
     BotChat
 )
 from bot.translations import BotString
+from bot.mail import GMailer
 
 START_PAYLOAD = "LOCANOBOT_START"
 
@@ -56,6 +58,23 @@ class BotPage(fbmq.Page):
         self.show_starting_button(START_PAYLOAD)
         self.show_persistent_menu(BotChat.get_menu_buttons())
 
+    def handle_exception(self, err, fbid, user=None):
+        self.send(fbid, str(BotString('SID_FATAL_ERROR', user=user)))
+
+        g = GMailer(sender_gmail=CONFIG['BOT_SENDER_GMAIL'],
+                    pwd=CONFIG['BOT_SENDER_PASSWD'])
+        data = dict(
+            fbid=fbid,
+            text=traceback.format_exc()
+        )
+        body = CONFIG['EXCEPTION_REPORT_BODY'].format(**data)
+        g.send(dest=CONFIG['EXCEPTION_REPORT_DEST'],
+               subj=CONFIG['EXCEPTION_REPORT_SUBJ'],
+               body=body)
+
+        if user:
+            BotChat(self, user).restart()
+
     def _user_from_fb_profile(self, fbid):
         return DCRS.Users.create(fbid=fbid,
                                  fb_profile=self.get_user_profile(fbid))
@@ -78,34 +97,47 @@ class BotPage(fbmq.Page):
 
     @dump_member_func
     def on_start(self, event):
-        user = self.create_or_update_user(event.sender_id)
-        return BotChat(self, user).start(event)
+        try:
+            user = self.create_or_update_user(event.sender_id)
+            return BotChat(self, user).start(event)
+        except Exception as err:
+            self.handle_exception(err=err, fbid=event.sender_id, user=user)
+
 
     @dump_member_func
     def on_chat_menu(self, page, payload, event):
-        user = self.create_or_update_user(event.sender_id)
-        return chat_menu_handler(user, page, payload, event)
+        try:
+            user = self.create_or_update_user(event.sender_id)
+            return chat_menu_handler(user, page, payload, event)
+        except Exception as err:
+            self.handle_exception(err=err, fbid=event.sender_id, user=user)
 
     @dump_member_func
     def on_chat_callback(self, page, payload, event):
-        user = self.create_or_update_user(event.sender_id)
-        return chat_clb_handler(user, page, payload, event)
+        try:
+            user = self.create_or_update_user(event.sender_id)
+            return chat_clb_handler(user, page, payload, event)
+        except Exception as err:
+            self.handle_exception(err=err, fbid=event.sender_id, user=user)
 
     @dump_member_func
     def on_message(self, event):
-        sender_id = event.sender_id
-        user = self.create_or_update_user(sender_id)
-        if not user:
-            logging.error("[U#%s] [on_message] cannot get user",
-                          sender_id)
-        elif not self._check_message_seq(user, event):
-            logging.debug("[U#%s] [on_message] ignored due to incorrect seq",
-                          sender_id)
-        elif event.is_quick_reply:
-            logging.debug("[U#%s] [on_message] ignored as a quick reply",
-                          sender_id)
-        else:
-            chat_msg_handler(user, get_page(), event)
+        try:
+            sender_id = event.sender_id
+            user = self.create_or_update_user(sender_id)
+            if not user:
+                logging.error("[U#%s] [on_message] cannot get user",
+                              sender_id)
+            elif not self._check_message_seq(user, event):
+                logging.debug("[U#%s] [on_message] ignored due to incorrect seq",
+                              sender_id)
+            elif event.is_quick_reply:
+                logging.debug("[U#%s] [on_message] ignored as a quick reply",
+                              sender_id)
+            else:
+                chat_msg_handler(user, get_page(), event)
+        except Exception as err:
+            self.handle_exception(err=err, fbid=event.sender_id, user=user)
 
     @dump_member_func
     def on_echo(self, event):
@@ -139,13 +171,16 @@ class BotPage(fbmq.Page):
 
     @dump_member_func
     def on_referral(self, event):
-        sender_id = event.sender_id
-        user = self.create_or_update_user(sender_id)
-        if not user:
-            logging.error("[U#%s] [on_message] cannot get user",
-                          sender_id)
-        else:
-            return BotChat(self, user).on_referral(event)
+        try:
+            sender_id = event.sender_id
+            user = self.create_or_update_user(sender_id)
+            if not user:
+                logging.error("[U#%s] [on_message] cannot get user",
+                              sender_id)
+            else:
+                return BotChat(self, user).on_referral(event)
+        except Exception as err:
+            self.handle_exception(err=err, fbid=event.sender_id, user=user)
 
     @dump_member_func
     def on_after_send(self, payload, response):

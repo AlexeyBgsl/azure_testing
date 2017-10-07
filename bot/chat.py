@@ -825,6 +825,10 @@ class BotChat(BaseStateMachine):
         self.page = page
         super().__init__(user=user, state=state, channel=channel, annc=annc)
 
+    def restart(self):
+        self.set_state('Root')
+        self.call_initiator()
+
     def start(self, event):
         if event.is_postback_referral:
             logging.debug("[U#%s] postback ref: %s, %s", event.sender_id,

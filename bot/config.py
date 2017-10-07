@@ -32,6 +32,14 @@ CONFIG = dict(
                               ('User: {first_name} {last_name}\n'
                                'FB ID: {fbid}\n'
                                'Text: {text}')),
+
+    EXCEPTION_REPORT_DEST = os.getenv('EXCEPTION_REPORT_DEST',
+                                      'botexception@locano.net'),
+    EXCEPTION_REPORT_SUBJ = os.getenv('EXCEPTION_REPORT_SUBJ',
+                                      'Locano Bot Exception'),
+    EXCEPTION_REPORT_BODY = os.getenv('EXCEPTION_REPORT_BODY',
+                                      ('FB ID: {fbid}\n'
+                                       'Text: {text}'))
 )
 
 def init_config():
