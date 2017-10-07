@@ -14,7 +14,7 @@ ACCESS_TOKEN_DBG = ('EAATBF61P4qoBAOxtLJqx75i2e04c2CUCpfTCiOTaJCuZA81ZAVf33icr'
                     'QlO2ltaF4uAwqQ')
 
 CHANNELS_INFO_URI = os.getenv('CHANNELS_BASE_URI',
-                              'https://locano.azurewebsites.net/channels/')
+                              'http://data.locano.net/channels/')
 assert CHANNELS_INFO_URI
 
 
