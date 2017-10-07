@@ -101,16 +101,16 @@ class Channel(BasicEntry):
             url = pyqrcode.create(m_link(ref), error='Q')
             png_fname = os.path.join(tempfile.gettempdir(), self.uchid)
             url.png(png_fname, scale=5)
-            file_storage.upload(png_fname, 'qr-code', blob_fname,
-                                content_type='image/png')
+            DCRS.FileStorage.upload(png_fname, 'qr-code', blob_fname,
+                                    content_type='image/png')
             os.remove(png_fname)
-            url = file_storage.get_url('qr-code', blob_fname)
+            url = DCRS.FileStorage.get_url('qr-code', blob_fname)
             opts.add(UpdateOps.Supported.SET, qr_code=url)
         if messenger_code_url:
-            file_storage.upload_from_url(messenger_code_url,
+            DCRS.FileStorage.upload_from_url(messenger_code_url,
                                          'messenger-code',
                                          blob_fname)
-            url = file_storage.get_url('messenger-code', blob_fname)
+            url = DCRS.FileStorage.get_url('messenger-code', blob_fname)
             opts.add(UpdateOps.Supported.SET, messenger_code=url)
         if opts.has_update:
             self.update_ex(opts)
@@ -145,8 +145,8 @@ class Channel(BasicEntry):
                             str(self.oid), str(uid))
 
     def delete(self):
-        file_storage.remove('qr-code', self.uchid)
-        file_storage.remove('messenger-code', self.uchid)
+        DCRS.FileStorage.remove('qr-code', self.uchid)
+        DCRS.FileStorage.remove('messenger-code', self.uchid)
         super().delete()
 
 
