@@ -8,7 +8,7 @@ DefaultStrings = dict(
     SID_ERROR='Something went wrong...',
     SID_FATAL_ERROR=(
         'Something went wrong. The incident will be reported to our '
-        'Development Team. We apologize for inconvience. Let\'s try again.'),
+        'Development Team. We apologize for inconvenience. Let\'s try again.'),
     SID_GREETING='Hi {{user_first_name}}, welcome to Locano Chatbot',
     SID_DONT_UNDERSTAND='Sorry, I don\'t understand you',
     SID_MENU_CHANNELS='Channels',
