@@ -97,6 +97,7 @@ class BotPage(fbmq.Page):
 
     @dump_member_func
     def on_start(self, event):
+        user = None
         try:
             user = self.create_or_update_user(event.sender_id)
             return BotChat(self, user).start(event)
@@ -106,6 +107,7 @@ class BotPage(fbmq.Page):
 
     @dump_member_func
     def on_chat_menu(self, page, payload, event):
+        user = None
         try:
             user = self.create_or_update_user(event.sender_id)
             return chat_menu_handler(user, page, payload, event)
@@ -114,6 +116,7 @@ class BotPage(fbmq.Page):
 
     @dump_member_func
     def on_chat_callback(self, page, payload, event):
+        user = None
         try:
             user = self.create_or_update_user(event.sender_id)
             return chat_clb_handler(user, page, payload, event)
@@ -122,6 +125,7 @@ class BotPage(fbmq.Page):
 
     @dump_member_func
     def on_message(self, event):
+        user = None
         try:
             sender_id = event.sender_id
             user = self.create_or_update_user(sender_id)
@@ -171,6 +175,7 @@ class BotPage(fbmq.Page):
 
     @dump_member_func
     def on_referral(self, event):
+        user = None
         try:
             sender_id = event.sender_id
             user = self.create_or_update_user(sender_id)
