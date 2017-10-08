@@ -853,13 +853,17 @@ class BotChat(BaseStateMachine):
             c = DCRS.Channels.find_unique(
                 uchid=r.params[self.REF_SUBSCRIBE_ACTION])
             if c:
+                sid = 'SID_ERROR'
                 if self.user.oid in c.subs:
                     sid = 'SID_SUB_EXISTS'
                 else:
                     c.subscribe(self.user.oid)
-                    sid = 'SID_SUB_ADDED' if self.user.oid in c.subs else 'SID_ERROR'
-                msg = str(BotString(sid, user=self.user, channel=c))
-                self.page.send(self.user.fbid, msg)
+                    if self.user.oid in c.subs:
+                        sid = 'SID_SUB_ADDED'
+                self.send_simple(msg_sid=sid, channel=c)
+                if sid != 'SID_ERROR':
+                    self.channel = c
+                    self.set_state('ViewChannel')
         else:
             logging.warning("[U#%s] unsupported ref: %s", self.user.oid, ref)
 
