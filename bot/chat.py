@@ -864,6 +864,7 @@ class BotChat(BaseStateMachine):
                 if sid != 'SID_ERROR':
                     self.channel = c
                     self.set_state('ViewChannel')
+                    self.call_initiator()
         else:
             logging.warning("[U#%s] unsupported ref: %s", self.user.oid, ref)
 
