@@ -37,10 +37,10 @@ class FileStorage(object):
             ctx = ContentSettings(content_type=content_type)
         else:
             ctx = self.content_by_fname(local_fname)
-            self.service.create_blob_from_path(type,
-                                               fname,
-                                               local_fname,
-                                               content_settings=ctx)
+        self.service.create_blob_from_path(type,
+                                           fname,
+                                           local_fname,
+                                           content_settings=ctx)
 
     def download(self, type, fname, local_fname):
         self.service.get_blob_to_path(type, fname, local_fname)
