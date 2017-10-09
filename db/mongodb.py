@@ -2,7 +2,6 @@ from abc import ABC
 from enum import Enum
 from pymongo import MongoClient
 from bson.objectid import ObjectId
-from .config import CONFIG, DCRS
 
 
 OID_KEY=u'_id'

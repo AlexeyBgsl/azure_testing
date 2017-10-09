@@ -16,7 +16,17 @@ def store_config(values):
         CONFIG[vname] = values[vname]
 
 
-class DCRS(): # Data Center Resource Set
-    @classmethod
-    def set(cls, name, val):
-        setattr(cls, name, val)
+class DataCenterResourceSet():
+    def __init__(self):
+        self.FileStorage = None
+        self.Users = None
+        self.Channels = None
+        self.Anncs = None
+        self.Strings = None
+
+    def set(self, name, val):
+        assert hasattr(self, name)
+        setattr(self, name, val)
+
+
+DCRS = DataCenterResourceSet()

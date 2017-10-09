@@ -4,7 +4,7 @@ from .models import User, Channel, Annc, String, \
 from .blob import FileStorage, \
     update_default_file_storage as _update_default_file_storage
 from .mongodb import UpdateOps
-from .config import CONFIG, DCRS, store_config as _store_config
+from .config import DataCenterResourceSet, DCRS, store_config as _store_config
 
 
 def config(values):
