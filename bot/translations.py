@@ -104,10 +104,7 @@ DefaultStrings = dict(
         "characters. That's like in a couple of twits, so just keep in mind "
         "you're not writing a novel."
     ),
-    SID_ERROR_LONG_TEXT=(
-        " It is too many words to be called brief. Cut something off and post "
-        "again"
-    ),
+    SID_ERROR_LONG_TEXT="That's not quite brief... Squeeze it and post again.",
     SID_ANNC_ROOT_PROMPT="Please choose a channel",
     SID_ANNC_CREATE_CHANNEL_PROMPT="Please create a channel first",
     SID_ANNC_NEW_CHANNEL="New Channel",
