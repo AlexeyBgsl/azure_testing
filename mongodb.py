@@ -23,6 +23,7 @@ class EntryField(object):
 class UpdateOps(object):
     class Supported(Enum):
         SET = '$set'
+        DEL = '$unset'
         ADD_TO_LIST = '$addToSet'
         DEL_FROM_LIST = '$pull'
 
@@ -114,6 +115,8 @@ class BasicEntry(ABC):
                 v = d[op][k]
                 if op == ops.Supported.SET.value:
                     setattr(self, k, v)
+                elif op is ops.Supported.DEL.value:
+                    delattr(self, k)
                 elif op == ops.Supported.ADD_TO_LIST.value:
                     l = getattr(self, k)
                     assert isinstance(l, list)

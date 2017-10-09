@@ -197,16 +197,15 @@ class Channels(BasicTable, DataCenterResource):
 
 class Annc(BasicEntry):
     INIT_FIELDS = [
-        EntryField('title', None),
         EntryField('chid', None),
         EntryField('owner_uid', None),
         EntryField('text', ''),
         EntryField('created', '')
     ]
 
-    def __init__(self, table, title=None, chid=None, owner_uid=None,
+    def __init__(self, table, text=None, chid=None, owner_uid=None,
                  entity=None):
-        super().__init__(table=table, title=title, chid=chid,
+        super().__init__(table=table, text=text, chid=chid,
                          owner_uid=owner_uid, entity=entity)
         if not entity:
             self.created = datetime.datetime.utcnow()
