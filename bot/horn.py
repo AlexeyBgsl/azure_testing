@@ -25,7 +25,7 @@ class Horn():
                                                  date=date)
         self.page.send(user.fbid, message)
 
-    def notify(self, annc):
+    def notify(self, annc, decorate=True):
         c = DCRS.Channels.by_oid(annc.chid)
         if c:
             subs = c.subs
@@ -34,7 +34,10 @@ class Horn():
             for uid in subs:
                 u = DCRS.Users.by_oid(uid)
                 if u:
-                    self.notify_one(user=u, annc=annc, channel=c)
+                    if decorate:
+                        self.notify_one(user=u, annc=annc, channel=c)
+                    else:
+                        self.page.send(u.fbid, annc.text)
                 else:
                     logging.debug("[C#%s] nonexistent user subscribed (%s)?",
                                   annc.chid, uid)

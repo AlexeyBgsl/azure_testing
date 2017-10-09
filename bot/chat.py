@@ -258,6 +258,14 @@ class BotChat(BaseStateMachine):
                                  action_id=FEEDBACK_ACTION_ID)
                              ]).quick_replies
 
+    def make_annc(self, text, decorate=True):
+        annc = DCRS.Anncs.new(text=text,
+                              chid=self.channel.oid,
+                              owner_uid=self.user.oid)
+        annc.save()
+        Horn(self.page).notify(annc, decorate=decorate)
+        return annc
+
     def set_state(self, state):
         if state != self.state:
             super().set_state(state=state)
@@ -701,6 +709,10 @@ class BotChat(BaseStateMachine):
         if event.is_postback:
             p = Payload.from_string(event.postback_payload)
             if p.action_id == 'YesPseudoChatState':
+                text = str(BotString(sid='SID_CHANNEL_REMOVED_NOTIFICATION',
+                                     user=self.user,
+                                     channel=self.channel))
+                self.make_annc(text=text, decorate=False)
                 self.channel.delete()
                 self.channel = None
                 self.send_simple('SID_CHANNEL_REMOVED')
@@ -770,12 +782,7 @@ class BotChat(BaseStateMachine):
             else:
                 logging.debug("[U#%s] Desired annc text is: %s",
                               event.sender_id, text)
-                self.annc = DCRS.Anncs.new(text=text,
-                                           chid=self.channel.oid,
-                                           owner_uid=self.user.oid)
-                self.annc.save()
-                Horn(self.page).notify(self.annc)
-                self.annc = None
+                self.make_annc(text=text)
                 self.set_state('Root')
         else:
             self._state_handler_default(event=event)

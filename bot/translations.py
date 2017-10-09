@@ -80,6 +80,9 @@ DefaultStrings = dict(
         'Enter a new description. Type \'skip\' if you don\'t want to change it.'
     ),
     SID_DEL_CHANNEL_PROMPT='Are you sure?',
+    SID_CHANNEL_REMOVED_NOTIFICATION=(
+        "The channel owner decided to shut $CHANNEL_NAME channel down."
+    ),
     SID_CHANNEL_REMOVED="Channel successfully removed",
     SID_CHANNEL_UNCHANGED="Channel remains unchanged",
     SID_LIST_SUBSCRIPTIONS="List Subscriptions",
