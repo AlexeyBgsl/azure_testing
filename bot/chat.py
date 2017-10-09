@@ -763,15 +763,20 @@ class BotChat(BaseStateMachine):
     @BaseStateMachine.state_handler('MakeAnnc')
     def state_handler_make_annc(self, event):
         if event.is_text_message:
-            logging.debug("[U#%s] Desired annc title is: %s",
-                          event.sender_id, event.message_text)
-            self.annc = DCRS.Anncs.new(text=event.message_text.strip(),
-                                       chid=self.channel.oid,
-                                       owner_uid=self.user.oid)
-            self.annc.save()
-            Horn(self.page).notify(self.annc)
-            self.annc = None
-            self.set_state('Root')
+            text = event.message_text.strip()
+            if len(text) > self.page.MAX_TEXT_LEN:
+                self.send_simple('SID_ERROR_LONG_TEXT',
+                                 std_quick_replies=False)
+            else:
+                logging.debug("[U#%s] Desired annc text is: %s",
+                              event.sender_id, text)
+                self.annc = DCRS.Anncs.new(text=text,
+                                           chid=self.channel.oid,
+                                           owner_uid=self.user.oid)
+                self.annc.save()
+                Horn(self.page).notify(self.annc)
+                self.annc = None
+                self.set_state('Root')
         else:
             self._state_handler_default(event=event)
 

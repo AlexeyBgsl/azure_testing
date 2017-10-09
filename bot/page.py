@@ -51,6 +51,7 @@ dump_member_func = dump_mfunc if DUMP_ALL else null_decorator
 
 class BotPage(fbmq.Page):
     singleton = None
+    MAX_TEXT_LEN = 500 # ~ 640 (Limit by FB) - announcement decoration length
 
     def __init__(self):
         super().__init__(CONFIG['ACCESS_TOKEN'])

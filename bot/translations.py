@@ -100,8 +100,13 @@ DefaultStrings = dict(
     SID_SUB_REMOVED="Done",
     SID_SUB_UNCHANGED="Subscription kept",
     SID_ANNC_GET_TEXT_PROMPT=(
-        "Enter the annoucement text. This may be a short or a long text with "
-        "links if need be"
+        "Enter the announcement text. Be brief, you have up to 500 "
+        "characters. That's like in a couple of twits, so just keep in mind "
+        "you're not writing a novel."
+    ),
+    SID_ERROR_LONG_TEXT=(
+        " It is too many words to be called brief. Cut something off and post "
+        "again"
     ),
     SID_ANNC_ROOT_PROMPT="Please choose a channel",
     SID_ANNC_CREATE_CHANNEL_PROMPT="Please create a channel first",
