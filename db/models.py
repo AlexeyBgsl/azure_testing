@@ -25,9 +25,8 @@ class User(BasicEntry):
         EntryField('state_payload', '')
     ]
 
-    def __init__(self, table=None, entity=None):
-        super().__init__(table=table if table else DCRS.Users,
-                         entity=entity)
+    def __init__(self, table, entity=None):
+        super().__init__(table=table, entity=entity)
 
     def delete(self):
         channels = Channel.table.all_subscribed(self.oid)
@@ -81,17 +80,8 @@ class Channel(BasicEntry):
             logging.info("User CHID#%s is already in use. Regenerating... ",
                          self.uchid)
 
-    @classmethod
-    def create(cls, name, owner_uid):
-        c = cls()
-        c.name = name
-        c.owner_uid = owner_uid
-        c._alloc_uchid()
-        return c
-
-    def __init__(self, table=None, entity=None):
-        super().__init__(table if table else DCRS.Channels,
-                         entity=entity)
+    def __init__(self, table, entity=None):
+        super().__init__(table=table, entity=entity)
 
     def set_code(self, ref=None, messenger_code_url=None):
         assert self.oid
@@ -187,6 +177,13 @@ class Channels(BasicTable):
         uchid = self.uchid_from_str(str)
         return self.find_unique(uchid=uchid) if uchid else None
 
+    def new(self, name, owner_uid):
+        c = super().new()
+        c.name = name
+        c.owner_uid = owner_uid
+        c._alloc_uchid()
+        return c
+
 
 class Annc(BasicEntry):
     INIT_FIELDS = [
@@ -197,11 +194,10 @@ class Annc(BasicEntry):
         EntryField('created', '')
     ]
 
-    def __init__(self, title=None, chid=None, owner_uid=None, entity=None,
-                 table=None):
-        super().__init__(table=table if table else DCRS.Anncs,
-                         title=title, chid=chid, owner_uid=owner_uid,
-                         entity=entity)
+    def __init__(self, table, title=None, chid=None, owner_uid=None,
+                 entity=None):
+        super().__init__(table=table, title=title, chid=chid,
+                         owner_uid=owner_uid, entity=entity)
         if not entity:
             self.created = datetime.datetime.utcnow()
 
@@ -235,9 +231,8 @@ class String(BasicEntry):
             return t[1]
         return None
 
-    def __init__(self, sid=None, table=None, entity=None):
-        super().__init__(table if table else DCRS.Strings,
-                         sid=sid, entity=entity)
+    def __init__(self, table, sid=None, entity=None):
+        super().__init__(table=table, sid=sid, entity=entity)
         if sid:
             e = self.table.raw_find_unique(sid=sid)
             if e:
