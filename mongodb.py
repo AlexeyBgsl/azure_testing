@@ -208,3 +208,6 @@ class BasicTable(ABC):
 
     def all(self):
         return self.find()
+
+    def new(self, **kwargs):
+        return self.obj_type(table=self, **kwargs)
