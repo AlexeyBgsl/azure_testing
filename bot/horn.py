@@ -1,7 +1,6 @@
 import logging
 from datetime import timedelta
-from db import User, Channel, DCRS
-from bot.translations import BotString
+from db import DCRS
 
 
 class Horn():
