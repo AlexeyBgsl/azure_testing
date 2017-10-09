@@ -17,11 +17,11 @@ def store_config(values):
 
 
 class DataCenterResource:
-    def attach(self, dcrc):
-        assert dcrc
-        self.dcrc = dcrc
-        assert hasattr(dcrc, type(self).__name__)
-        setattr(dcrc, type(self).__name__, self)
+    def attach(self, dcrs):
+        assert dcrs
+        self.dcrs = dcrs
+        assert hasattr(dcrs, type(self).__name__)
+        setattr(dcrs, type(self).__name__, self)
 
 
 class DataCenterResourceSet():

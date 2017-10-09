@@ -28,12 +28,6 @@ class User(BasicEntry):
     def __init__(self, table, entity=None):
         super().__init__(table=table, entity=entity)
 
-    def delete(self):
-        channels = Channel.table.all_subscribed(self.oid)
-        for c in channels:
-            c.unsubscribe(self.oid)
-        super().delete()
-
 
 class Users(BasicTable, DataCenterResource):
     obj_type = User
@@ -52,6 +46,13 @@ class Users(BasicTable, DataCenterResource):
         obj.from_dict(fb_profile)
         obj.fbid = fbid
         obj.save_unique(fbid=fbid)
+
+    def delete(self, oid):
+        for c in self.dcrs.Channels.find(owner_uid=oid):
+            c.delete()
+        for c in self.dcrs.Channels.all_subscribed(self.oid):
+            c.unsubscribe(oid)
+        super().delete(oid)
 
 
 class Channel(BasicEntry):
@@ -80,6 +81,10 @@ class Channel(BasicEntry):
             logging.info("User CHID#%s is already in use. Regenerating... ",
                          self.uchid)
 
+    @property
+    def file_storage(self):
+        return self.table.dcrs.FileStorage
+
     def __init__(self, table, entity=None):
         super().__init__(table=table, entity=entity)
 
@@ -91,16 +96,16 @@ class Channel(BasicEntry):
             url = pyqrcode.create(m_link(ref), error='Q')
             png_fname = os.path.join(tempfile.gettempdir(), self.uchid)
             url.png(png_fname, scale=5)
-            DCRS.FileStorage.upload(png_fname, 'qr-code', blob_fname,
-                                    content_type='image/png')
+            self.file_storage.upload(png_fname, 'qr-code', blob_fname,
+                                     content_type='image/png')
             os.remove(png_fname)
-            url = DCRS.FileStorage.get_url('qr-code', blob_fname)
+            url = self.file_storage.get_url('qr-code', blob_fname)
             opts.add(UpdateOps.Supported.SET, qr_code=url)
         if messenger_code_url:
-            DCRS.FileStorage.upload_from_url(messenger_code_url,
-                                         'messenger-code',
-                                         blob_fname)
-            url = DCRS.FileStorage.get_url('messenger-code', blob_fname)
+            self.file_storage.upload_from_url(messenger_code_url,
+                                              'messenger-code',
+                                              blob_fname)
+            url = self.file_storage.get_url('messenger-code', blob_fname)
             opts.add(UpdateOps.Supported.SET, messenger_code=url)
         if opts.has_update:
             self.update_ex(opts)
@@ -135,8 +140,8 @@ class Channel(BasicEntry):
                             str(self.oid), str(uid))
 
     def delete(self):
-        DCRS.FileStorage.remove('qr-code', self.uchid)
-        DCRS.FileStorage.remove('messenger-code', self.uchid)
+        self.file_storage.remove('qr-code', self.uchid)
+        self.file_storage.remove('messenger-code', self.uchid)
         super().delete()
 
 
@@ -183,6 +188,11 @@ class Channels(BasicTable, DataCenterResource):
         c.owner_uid = owner_uid
         c._alloc_uchid()
         return c
+
+    def delete(self, oid):
+        for a in self.dcrs.Anncs.find(chid=oid):
+            a.delete()
+        super().delete(oid)
 
 
 class Annc(BasicEntry):
