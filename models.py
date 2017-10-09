@@ -50,7 +50,7 @@ class Users(BasicTable, DataCenterResource):
     def delete(self, oid):
         for c in self.dcrs.Channels.find(owner_uid=oid):
             c.delete()
-        for c in self.dcrs.Channels.all_subscribed(self.oid):
+        for c in self.dcrs.Channels.all_subscribed(uid=oid):
             c.unsubscribe(oid)
         super().delete(oid)
 
