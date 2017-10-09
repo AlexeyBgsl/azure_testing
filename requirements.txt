@@ -1,7 +1,7 @@
-Flask
+Flask==0.12.2
 -e git+https://github.com/drj11/pypng.git#egg=pypng
 -e git+https://github.com/anton-nayshtut/fbmq.git@deploy#egg=fbmq
-pymongo
-azure-storage
-pyqrcode
-pypng
+pymongo==3.5.1
+azure-storage==0.36.0
+pyqrcode==1.2.1
+cffi==1.11.1
