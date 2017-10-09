@@ -769,9 +769,7 @@ class BotChat(BaseStateMachine):
                                        chid=self.channel.oid,
                                        owner_uid=self.user.oid)
             self.annc.save()
-            h = Horn(self.page)
-            h.notify_one(user=self.user, annc=self.annc)
-            h.notify(self.annc)
+            Horn(self.page).notify(self.annc)
             self.annc = None
             self.set_state('Root')
         else:

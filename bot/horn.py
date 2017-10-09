@@ -28,7 +28,10 @@ class Horn():
     def notify(self, annc):
         c = DCRS.Channels.by_oid(annc.chid)
         if c:
-            for uid in c.subs:
+            subs = c.subs
+            if annc.owner_uid not in c.subs:
+                subs.insert(0, annc.owner_uid)
+            for uid in subs:
                 u = DCRS.Users.by_oid(uid)
                 if u:
                     self.notify_one(user=u, annc=annc, channel=c)
