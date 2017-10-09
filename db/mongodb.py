@@ -167,7 +167,7 @@ class BasicTable(ABC):
         result = self.collection.update_one(self.__page_dict(filter),
                                             u.update,
                                             upsert=True)
-        return result.upsertedId
+        return result.upserted_id
 
     def insert(self, entry):
         assert entry.oid is None
