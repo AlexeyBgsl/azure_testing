@@ -1,7 +1,7 @@
 import logging
-from fbmq import QuickReply, Template, Attachment
+from fbmq import QuickReply, Template
 from bot.translations import BotString
-from db import Channel, Annc, DCRS, UpdateOps, m_link
+from db import DCRS, UpdateOps, m_link
 from bot.horn import Horn
 from bot.config import CONFIG
 from bot.mail import GMailer
@@ -532,8 +532,8 @@ class BotChat(BaseStateMachine):
         if event.is_text_message:
             logging.debug("[U#%s] Desired channel name is: %s",
                           event.sender_id, event.message_text)
-            c = Channel.create(name=event.message_text,
-                               owner_uid=self.user.oid)
+            c = DCRS.Channels.new(name=event.message_text,
+                                  owner_uid=self.user.oid)
             r = BotRef(sub=c.uchid)
             mc = self.page.get_messenger_code(ref=r.ref)
             c.set_code(ref=r.ref, messenger_code_url=mc)
@@ -765,9 +765,9 @@ class BotChat(BaseStateMachine):
         if event.is_text_message:
             logging.debug("[U#%s] Desired annc title is: %s",
                           event.sender_id, event.message_text)
-            self.annc = Annc(title=event.message_text,
-                             chid=self.channel.oid,
-                             owner_uid=self.user.oid)
+            self.annc = DCRS.Anncs.new(title=event.message_text,
+                                       chid=self.channel.oid,
+                                       owner_uid=self.user.oid)
             self.annc.save()
             self.set_state('SetAnncText')
         else:

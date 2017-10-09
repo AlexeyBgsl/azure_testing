@@ -1,4 +1,4 @@
-from db import String
+from db import String, DCRS
 from string import Template
 
 
@@ -147,7 +147,7 @@ class BotString(String):
         return self.sid in self.defaults
 
     def __init__(self, sid, locale=None, user=None, channel=None, annc=None):
-        super().__init__(sid)
+        super().__init__(table=DCRS.Strings, sid=sid)
         self.locale = locale
         self.user = user
         self.channel = channel
