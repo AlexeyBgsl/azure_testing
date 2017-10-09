@@ -16,6 +16,14 @@ def store_config(values):
         CONFIG[vname] = values[vname]
 
 
+class DataCenterResource:
+    def attach(self, dcrc):
+        assert dcrc
+        self.dcrc = dcrc
+        assert hasattr(dcrc, type(self).__name__)
+        setattr(dcrc, type(self).__name__, self)
+
+
 class DataCenterResourceSet():
     def __init__(self):
         self.FileStorage = None
@@ -23,10 +31,6 @@ class DataCenterResourceSet():
         self.Channels = None
         self.Anncs = None
         self.Strings = None
-
-    def set(self, name, val):
-        assert hasattr(self, name)
-        setattr(self, name, val)
 
 
 DCRS = DataCenterResourceSet()

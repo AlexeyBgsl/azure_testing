@@ -6,7 +6,7 @@ import os
 import pyqrcode
 import datetime
 from .mongodb import BasicEntry, BasicTable, EntryField, UpdateOps
-from .config import CONFIG, DCRS
+from .config import CONFIG, DCRS, DataCenterResource
 
 MAX_CHID_CYPHERS = 9
 
@@ -35,7 +35,7 @@ class User(BasicEntry):
         super().delete()
 
 
-class Users(BasicTable):
+class Users(BasicTable, DataCenterResource):
     obj_type = User
 
     def __init__(self, mongodb_uri, db_name, fb_page_name):
@@ -140,7 +140,7 @@ class Channel(BasicEntry):
         super().delete()
 
 
-class Channels(BasicTable):
+class Channels(BasicTable, DataCenterResource):
     obj_type = Channel
 
     @staticmethod
@@ -202,7 +202,7 @@ class Annc(BasicEntry):
             self.created = datetime.datetime.utcnow()
 
 
-class Anncs(BasicTable):
+class Anncs(BasicTable, DataCenterResource):
     obj_type = Annc
 
     def __init__(self, mongodb_uri, db_name, fb_page_name):
@@ -263,7 +263,7 @@ class String(BasicEntry):
         return l
 
 
-class Strings(BasicTable):
+class Strings(BasicTable, DataCenterResource):
     obj_type = String
 
     def __init__(self, mongodb_uri, db_name, fb_page_name):
@@ -276,6 +276,6 @@ class Strings(BasicTable):
 def update_defaults_models():
     collection_types = [ Users, Channels, Anncs, Strings ]
     for t in collection_types:
-        DCRS.set(t.__name__, t(mongodb_uri=CONFIG['MONGODB_URI'],
-                               db_name=CONFIG['MONGODB_DB'],
-                               fb_page_name=CONFIG['FB_PAGE_NAME']))
+        t(mongodb_uri=CONFIG['MONGODB_URI'],
+          db_name=CONFIG['MONGODB_DB'],
+          fb_page_name=CONFIG['FB_PAGE_NAME']).attach(DCRS)

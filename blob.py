@@ -3,10 +3,10 @@ import requests
 from io import BytesIO
 from azure.storage.blob import BlockBlobService, ContentSettings
 from azure.common import AzureHttpError
-from .config import CONFIG, DCRS
+from .config import CONFIG, DCRS, DataCenterResource
 
 
-class FileStorage(object):
+class FileStorage(DataCenterResource):
     @staticmethod
     def content_by_fname(fname):
         root, ext =  os.path.splitext()
@@ -61,6 +61,5 @@ class FileStorage(object):
 
 
 def update_default_file_storage():
-    DCRS.set('FileStorage',
-             FileStorage(account_key=CONFIG['STORAGE_ACCOUNT_KEY'],
-                         account_name=CONFIG['STORAGE_ACCOUNT_NAME']))
+    FileStorage(account_key=CONFIG['STORAGE_ACCOUNT_KEY'],
+                account_name=CONFIG['STORAGE_ACCOUNT_NAME']).attach(DCRS)
