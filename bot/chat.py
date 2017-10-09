@@ -758,30 +758,17 @@ class BotChat(BaseStateMachine):
 
     @BaseStateMachine.state_initiator('MakeAnnc')
     def state_init_make_annc(self):
-        self.send_simple('SID_ANNC_GET_TITLE_PROMPT', std_quick_replies=False)
+        self.send_simple('SID_ANNC_GET_TEXT_PROMPT', std_quick_replies=False)
 
     @BaseStateMachine.state_handler('MakeAnnc')
     def state_handler_make_annc(self, event):
         if event.is_text_message:
             logging.debug("[U#%s] Desired annc title is: %s",
                           event.sender_id, event.message_text)
-            self.annc = DCRS.Anncs.new(title=event.message_text,
+            self.annc = DCRS.Anncs.new(text=event.message_text.strip(),
                                        chid=self.channel.oid,
                                        owner_uid=self.user.oid)
             self.annc.save()
-            self.set_state('SetAnncText')
-        else:
-            self._state_handler_default(event=event)
-
-    @BaseStateMachine.state_initiator('SetAnncText')
-    def state_init_set_annc_text(self):
-        self.send_simple('SID_ANNC_GET_TEXT_PROMPT', std_quick_replies=False)
-
-    @BaseStateMachine.state_handler('SetAnncText')
-    def state_handler_set_annc_text(self, event):
-        if event.is_text_message:
-            self.annc.update(op=UpdateOps.Supported.SET,
-                             text=event.message_text.strip())
             h = Horn(self.page)
             h.notify_one(user=self.user, annc=self.annc)
             h.notify(self.annc)

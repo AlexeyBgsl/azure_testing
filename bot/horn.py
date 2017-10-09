@@ -18,10 +18,8 @@ class Horn():
         date = created.strftime("%B %d, %Y")
         time = created.strftime("%I:%M %p")
         message = ("// {chname}\n"
-                   "{title}\n\n"
-                   "{text}\n"
+                   "\n{text}\n\n"
                    "// {time} // {date}").format(chname=channel.name,
-                                                 title=annc.title,
                                                  text=annc.text,
                                                  time=time,
                                                  date=date)

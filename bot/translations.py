@@ -99,9 +99,9 @@ DefaultStrings = dict(
     SID_SUB_UNSUBSCRIBE_PROMPT='Are you sure?',
     SID_SUB_REMOVED="Done",
     SID_SUB_UNCHANGED="Subscription kept",
-    SID_ANNC_GET_TITLE_PROMPT="Enter the announcement title:",
     SID_ANNC_GET_TEXT_PROMPT=(
-        "Enter а description. This may be a short or a long text with links if need be"
+        "Enter the annoucement text. This may be a short or a long text with "
+        "links if need be"
     ),
     SID_ANNC_ROOT_PROMPT="Please choose a channel",
     SID_ANNC_CREATE_CHANNEL_PROMPT="Please create a channel first",
@@ -175,6 +175,5 @@ class BotString(String):
             d[self.SUB_CHANNEL_NAME] = self.channel.name
             d[self.SUB_CHANNEL_ID] = self.channel.str_uchid
         if self.annc:
-            d[self.SUB_ANNC_TITLE] = self.annc.title
             d[self.SUB_ANNC_TEXT] = self.annc.text
         return Template(self.get_safe(self.locale)).safe_substitute(d)
