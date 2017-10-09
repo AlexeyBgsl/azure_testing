@@ -104,7 +104,7 @@ DefaultStrings = dict(
     SID_SUB_UNCHANGED="Subscription kept",
     SID_ANNC_GET_TEXT_PROMPT=(
         "Enter the announcement text. Be brief, you have up to 500 "
-        "characters. That's like in a couple of twits, so just keep in mind "
+        "characters. That's as many as in a couple of twits, so just keep in mind "
         "you're not writing a novel."
     ),
     SID_ERROR_LONG_TEXT="That's not quite brief... Squeeze it and post again.",
