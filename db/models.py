@@ -188,13 +188,14 @@ class Channels(BasicTable, DataCenterResource):
         c._alloc_uchid()
         return c
 
-    def new_reserved(self, name, owner_uid, uchid):
+    def new_reserved(self, name, desc, owner_uid, uchid):
         assert uchid
         assert len(uchid) == MAX_CHID_CYPHERS
         assert uchid.isdigit()
         assert uchid[0] == '0'
         c = super().new()
         c.name = name
+        c.desc = desc
         c.owner_uid = owner_uid
         c.status = 'ready'
         c.uchid=uchid
