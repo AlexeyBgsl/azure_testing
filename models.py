@@ -7,12 +7,10 @@ import pyqrcode
 import datetime
 from .mongodb import BasicEntry, BasicTable, EntryField, UpdateOps
 from .config import CONFIG, DCRS, DataCenterResource
+from .misc import m_link
 
 MAX_CHID_CYPHERS = 9
 
-
-def m_link(ref):
-    return 'http://m.me/' + CONFIG['FB_PAGE_NAME'] + '?ref=' + ref
 
 def _blob_fname(fname):
     return CONFIG['FB_PAGE_NAME'] + '.' + fname
@@ -46,6 +44,7 @@ class Users(BasicTable, DataCenterResource):
         obj.from_dict(fb_profile)
         obj.fbid = fbid
         obj.save_unique(fbid=fbid)
+        return obj
 
     def delete(self, oid):
         for c in self.dcrs.Channels.find(owner_uid=oid):
@@ -187,6 +186,19 @@ class Channels(BasicTable, DataCenterResource):
         c.name = name
         c.owner_uid = owner_uid
         c._alloc_uchid()
+        return c
+
+    def new_reserved(self, name, owner_uid, uchid):
+        assert uchid
+        assert len(uchid) == MAX_CHID_CYPHERS
+        assert uchid.isdigit()
+        assert uchid[0] == '0'
+        c = super().new()
+        c.name = name
+        c.owner_uid = owner_uid
+        c.status = 'ready'
+        c.uchid=uchid
+        c.save_unique(uchid=uchid)
         return c
 
     def delete(self, oid):
