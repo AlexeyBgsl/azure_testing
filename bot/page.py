@@ -3,7 +3,7 @@ import fbmq
 import functools
 import traceback
 from bot.config import CONFIG
-from db import User, DCRS, UpdateOps
+from db import DCRS, UpdateOps, BotRef
 from bot.chat import (
     BotChatClbTypes,
     chat_clb_handler,
@@ -49,15 +49,58 @@ def null_decorator(f):
 dump_member_func = dump_mfunc if DUMP_ALL else null_decorator
 
 
+
 class BotPage(fbmq.Page):
     singleton = None
     MAX_TEXT_LEN = 500 # ~ 640 (Limit by FB) - announcement decoration length
+    LOCANO_ADMIN_FBID = 'locanoadmin2017'
+    LOCANO_ADMIN_PROFILE = {
+        "profile_pic": "http://locano.net/images/locano_team_pic.png",
+        "first_name": "Locano",
+        "last_name": ""
+    }
+    LOCANO_NEWS_CHANNEL_NAME = 'Locano Updates'
+    LOCANO_NEWS_CHANNEL_DESC = 'The Official Locano News Channel'
+    LOCANO_NEWS_CHANNEL_UCHID = '000000000'
+    LOCANO_NEWS_CHANNEL_PIC_URL = \
+        'http://locano.net/images/locano_news_channel_pic.png'
+
+    def set_su(self):
+        self.su = DCRS.Users.find_unique(fbid=self.LOCANO_ADMIN_FBID)
+        if not self.su:
+            self.su = DCRS.Users.create(fbid=self.LOCANO_ADMIN_FBID,
+                                   fb_profile=self.LOCANO_ADMIN_PROFILE)
+            logging.debug("SuperUser created (%r)", self.su.oid)
+        return self.su
+
+    def set_news_channel(self):
+        self.newsch = DCRS.Channels.find(uchid=self.LOCANO_NEWS_CHANNEL_UCHID)
+        if not self.newsch:
+            self.newsch = \
+                DCRS.Channels.new_reserved(name=self.LOCANO_NEWS_CHANNEL_NAME,
+                                           desc=self.LOCANO_NEWS_CHANNEL_DESC,
+                                           owner_uid=self.su.oid,
+                                           uchid=self.LOCANO_NEWS_CHANNEL_UCHID)
+            r = BotRef(sub=self.newsch.uchid)
+            mc = self.get_messenger_code(ref=r.ref)
+            self.newsch.set_code(ref=r.ref, messenger_code_url=mc)
+            self.newsch.set_cover_pic(self.LOCANO_NEWS_CHANNEL_PIC_URL)
+            logging.debug("News Channel created (%r)", self.newsch.oid)
+            for u in DCRS.Users.all():
+                if u.oid != self.su.oid:
+                    self.newsch.subscribe(u.oid)
+                    logging.debug("User#%s (%r) subscribed to the News Channel",
+                                  u.fbid, u.oid)
 
     def __init__(self):
         super().__init__(CONFIG['ACCESS_TOKEN'])
         self.greeting(str(BotString('SID_GREETING')))
         self.show_starting_button(START_PAYLOAD)
         self.show_persistent_menu(BotChat.get_menu_buttons())
+        self.su = None
+        self.set_su()
+        self.newsch = None
+        self.set_news_channel()
 
     def handle_exception(self, err, fbid, user=None):
         self.send(fbid, str(BotString('SID_FATAL_ERROR', user=user)))
@@ -94,6 +137,10 @@ class BotPage(fbmq.Page):
         user = DCRS.Users.find_unique(fbid=fbid)
         if user is None:
             user = self._user_from_fb_profile(fbid)
+            if user:
+                self.newsch.subscribe(user.oid)
+                logging.debug("New user#%s subscribed to the News Channel",
+                              user.fbid)
         return user
 
     @dump_member_func
