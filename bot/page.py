@@ -74,7 +74,7 @@ class BotPage(fbmq.Page):
         return self.su
 
     def set_news_channel(self):
-        self.newsch = DCRS.Channels.find(uchid=self.LOCANO_NEWS_CHANNEL_UCHID)
+        self.newsch = DCRS.Channels.find_unique(uchid=self.LOCANO_NEWS_CHANNEL_UCHID)
         if not self.newsch:
             self.newsch = \
                 DCRS.Channels.new_reserved(name=self.LOCANO_NEWS_CHANNEL_NAME,
