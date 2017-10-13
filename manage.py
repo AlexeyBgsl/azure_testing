@@ -66,6 +66,22 @@ def _set_channel_field(args, fname):
     _print_db_entry(args.channel)
 
 
+def _add_annc(args, silent):
+    if not args.args.text:
+        raise ValueError("Announcement text is required")
+    if args.user:
+        raise ValueError("Wrong or ambiguous command line")
+    if not args.channel:
+        raise ValueError("Channel is required")
+    annc = DCRS.Anncs.new(text=args.args.text,
+                          chid=args.channel.oid,
+                          owner_uid=args.channel.owner_uid)
+    annc.save()
+    if not silent:
+        Horn(get_page()).notify(annc)
+    print("Done")
+    _print_db_entry(annc)
+
 def setup_rel_env(config):
     rel_config = config
     tree = ET.parse('web.config')
@@ -151,19 +167,11 @@ def resend_annc(args):
 
 
 def add_annc(args):
-    if not args.args.text:
-        raise ValueError("Announcement text is required")
-    if args.user:
-        raise ValueError("Wrong or ambiguous command line")
-    if not args.channel:
-        raise ValueError("Channel is required")
-    annc = DCRS.Anncs.new(text=args.args.text,
-                          chid=args.channel.oid,
-                          owner_uid=args.channel.owner_uid)
-    annc.save()
-    Horn(get_page()).notify(annc)
-    print("Done")
-    _print_db_entry(annc)
+    _add_annc(args, silent=False)
+
+
+def add_annc_silent(args):
+    _add_annc(args, silent=True)
 
 
 def del_annc(args):
@@ -211,7 +219,7 @@ def list_users(args):
 
 commands = [list_channels, add_channel, del_channel,
             set_channel_name, set_channel_decs, set_channel_pic,
-            list_anncs, resend_annc, add_annc, del_annc,
+            list_anncs, resend_annc, add_annc, add_annc_silent, del_annc,
             set_annc_text, set_annc_dtime,
             list_users]
 
