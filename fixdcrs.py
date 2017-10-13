@@ -1,9 +1,7 @@
-import argparse
-from db import DCRS, UpdateOps
-from bot.chat import BotRef
 import requests
+import argparse
 from config import CONFIG
-from db import config as db_config
+from db import BotRef, DCRS, UpdateOps, config as db_config
 import xml.etree.ElementTree as ET
 
 
