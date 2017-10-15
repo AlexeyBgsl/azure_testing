@@ -178,7 +178,7 @@ def del_annc(args):
     if not args.annc:
         raise ValueError("Announcement is required")
     aid = input("Enter Announcemnt OID to proceed: ")
-    if str(args.anncs.oid) == aid:
+    if str(args.annc.oid) == aid:
         args.annc.delete()
         print("Done")
     else:
