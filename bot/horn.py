@@ -25,11 +25,11 @@ class Horn():
                                                  date=date)
         self.page.send(user.fbid, message)
 
-    def notify(self, annc, decorate=True):
+    def notify(self, annc, decorate=True, skip_owner=False):
         c = DCRS.Channels.by_oid(annc.chid)
         if c:
             subs = c.subs
-            if annc.owner_uid not in c.subs:
+            if not skip_owner and annc.owner_uid not in c.subs:
                 subs.insert(0, annc.owner_uid)
             for uid in subs:
                 u = DCRS.Users.by_oid(uid)

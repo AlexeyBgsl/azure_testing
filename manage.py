@@ -78,7 +78,7 @@ def _add_annc(args, silent):
                           owner_uid=args.channel.owner_uid)
     annc.save()
     if not silent:
-        Horn(get_page()).notify(annc)
+        Horn(get_page()).notify(annc, skip_owner=True)
     print("Done")
     _print_db_entry(annc)
 
@@ -162,7 +162,7 @@ def list_anncs(args):
 def resend_annc(args):
     if not args.annc:
         raise ValueError("Announcement is required")
-    Horn(get_page()).notify(annc=args.annc)
+    Horn(get_page()).notify(annc=args.annc, skip_owner=True)
     print("Done")
 
 
