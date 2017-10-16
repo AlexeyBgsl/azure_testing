@@ -45,6 +45,17 @@ SLOT_NAME=$2
     return 0
 }
 
+show_deployment() {
+SLOT_NAME=$1
+    SLOT_OPT=
+    if [ ! -z $SLOT_NAME ]; then
+        SLOT_OPT="--slot $SLOT_NAME"
+    fi
+    az webapp deployment source show --name $WEBAPP_NAME \
+    --resource-group $RGROUP_NAME $SLOT_OPT || return 2
+
+    return 0
+}
 
 sync() {
 SLOT_NAME=$1
@@ -135,11 +146,14 @@ usage() {
     echo "        ls_slots - list all slots"
     echo "        add_slot - deploy webapp to a separate slot"
     echo "        del_slot - remove deployment slot"
-    echo "        config_slot - conigure deployment slot"
     echo "        swap_slot - swap the slot into production"
     echo "        sync - synchronize from the repository"
-    echo "        browse - open the slot/webapp in browser (webapp if no slot provided)"
-    echo "        is_slot_up - check whether the slot/webapp is up (webapp if no slot provided)"
+    echo "        set_depl - configure the deployment for the the slot/webapp"
+    echo "        show_depl - show the deployment config for the the slot/webapp"
+    echo "        browse - open the slot/webapp in browser"
+    echo "        is_slot_up - check whether the slot/webapp is up"
+    echo ""
+    echo "    NOTE: for all the commands valid for either slot or webapp, webapp is used if no slot (-s) specified"
     echo ""
     echo "    options:"
     echo "        -b <git_branch>"
@@ -190,13 +204,16 @@ case $ACTION in
                 test -z $SLOT_NAME && { echo "ERROR: slot name is mandatory" && usage && exit 1; }
                 delete_slot $SLOT_NAME
                 ;;
-        config_slot)
-                test -z $GIT_BRANCH && { echo "ERROR: git branch is mandatory" && usage && exit 1; }
-                sel_deployment $GIT_BRANCH $SLOT_NAME
-                ;;
         swap_slot)
                 test -z $SLOT_NAME && { echo "ERROR: slot name is mandatory" && usage && exit 1; }
                 swap_slot $SLOT_NAME
+                ;;
+        set_depl)
+                test -z $GIT_BRANCH && { echo "ERROR: git branch is mandatory" && usage && exit 1; }
+                sel_deployment $GIT_BRANCH $SLOT_NAME
+                ;;
+        show_depl)
+                show_deployment $SLOT_NAME
                 ;;
         sync)
                 sync $SLOT_NAME
