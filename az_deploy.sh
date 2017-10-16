@@ -137,6 +137,7 @@ usage() {
     echo "        del_slot - remove deployment slot"
     echo "        config_slot - conigure deployment slot"
     echo "        swap_slot - swap the slot into production"
+    echo "        sync - synchronize from the repository"
     echo "        browse - open the slot/webapp in browser (webapp if no slot provided)"
     echo "        is_slot_up - check whether the slot/webapp is up (webapp if no slot provided)"
     echo ""
@@ -197,7 +198,7 @@ case $ACTION in
                 test -z $SLOT_NAME && { echo "ERROR: slot name is mandatory" && usage && exit 1; }
                 swap_slot $SLOT_NAME
                 ;;
-        deploy)
+        sync)
                 sync $SLOT_NAME
                 ;;
         browse)
