@@ -115,7 +115,7 @@ SLOT_NAME=$1
 }
 
 
-is_slot_up() {
+is_up() {
 SLOT_NAME=$1
     SLOT_HOST=$(slot_host_name $SLOT_NAME)
     if [ -z SLOT_HOST ]; then
@@ -151,7 +151,7 @@ usage() {
     echo "        set_depl - configure the deployment for the the slot/webapp"
     echo "        show_depl - show the deployment config for the the slot/webapp"
     echo "        browse - open the slot/webapp in browser"
-    echo "        is_slot_up - check whether the slot/webapp is up"
+    echo "        is_up - check whether the slot/webapp is up"
     echo ""
     echo "    NOTE: for all the commands valid for either slot or webapp, webapp is used if no slot (-s) specified"
     echo ""
@@ -221,8 +221,8 @@ case $ACTION in
         browse)
                 browse $SLOT_NAME
                 ;;
-        is_slot_up)
-                is_slot_up $SLOT_NAME
+        is_up)
+                is_up $SLOT_NAME
                 ;;
         *)
                 echo "ERROR: unknown action \"$ACTION\""
