@@ -31,12 +31,29 @@ SLOT_NAME=$1
 }
 
 sel_deployment() {
-SLOT_NAME=$1
-GIT_BRANCH=$2
+GIT_BRANCH=$1
+SLOT_NAME=$2
+    SLOT_OPT=
+    if [ ! -z $SLOT_NAME ]; then
+        SLOT_OPT="--slot $SLOT_NAME"
+    fi
     # Deploy $GIT_BRANCH code to $SLOT_NAME slot from $GIT_REPO
     az webapp deployment source config --name $WEBAPP_NAME \
-    --resource-group $RGROUP_NAME --slot $SLOT_NAME \
+    --resource-group $RGROUP_NAME $SLOT_OPT \
     --repo-url $GIT_REPO --branch $GIT_BRANCH --manual-integration || return 2
+
+    return 0
+}
+
+
+sync() {
+SLOT_NAME=$1
+    SLOT_OPT=
+    if [ ! -z $SLOT_NAME ]; then
+        SLOT_OPT="--slot $SLOT_NAME"
+    fi
+    az webapp deployment source sync --name $WEBAPP_NAME \
+    --resource-group $RGROUP_NAME $SLOT_OPT || return 2
 
     return 0
 }
@@ -173,13 +190,15 @@ case $ACTION in
                 delete_slot $SLOT_NAME
                 ;;
         config_slot)
-                test -z $SLOT_NAME && { echo "ERROR: slot name is mandatory" && usage && exit 1; }
                 test -z $GIT_BRANCH && { echo "ERROR: git branch is mandatory" && usage && exit 1; }
-                sel_deployment $SLOT_NAME $GIT_BRANCH
+                sel_deployment $GIT_BRANCH $SLOT_NAME
                 ;;
         swap_slot)
                 test -z $SLOT_NAME && { echo "ERROR: slot name is mandatory" && usage && exit 1; }
                 swap_slot $SLOT_NAME
+                ;;
+        deploy)
+                sync $SLOT_NAME
                 ;;
         browse)
                 browse $SLOT_NAME
